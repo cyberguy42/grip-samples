@@ -188,7 +188,7 @@ namespace planning {
 	pose = p;
         
         //PRINT(pose);
-       //PRINT(targetPoint);
+        //PRINT(targetPoint);
         //PRINT(graspPoint);
          
         return true;
@@ -197,7 +197,6 @@ namespace planning {
     double GraspRRT::calculateMinDistance(Eigen::Vector3d &closest){
         //1. get collision meshes and vertices
         //ECHO("CALCULATING CLOSEST POINT");
-        
         kinematics::Shape* shape = objectNode->getShape();
         const aiScene* sc = shape->getVizMesh();
         
