@@ -47,31 +47,52 @@ namespace planning { class Controller; }
 class planningTab : public GRIPTab
 {
 public:
-  planningTab() {};
-  planningTab(wxWindow * parent, wxWindowID id = -1, const wxPoint & pos = wxDefaultPosition, const wxSize & size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-  virtual ~planningTab() {};
-
-  virtual void GRIPEventSimulationBeforeTimestep();
-  virtual void GRIPEventSceneLoaded();
-
-  void onButtonSetStart(wxCommandEvent & _evt);
-  void onButtonSetGoal(wxCommandEvent & _evt);
-  void onButtonSetPredefStart(wxCommandEvent & _evt);
-  void onButtonSetPredefGoal(wxCommandEvent & _evt);
-  void onButtonRelocateObjects(wxCommandEvent & _evt);
-  void onButtonShowStart(wxCommandEvent & _evt);
-  void onButtonShowGoal(wxCommandEvent & _evt);
-  void onButtonPlan(wxCommandEvent & _evt);
-
-  planning::Controller* mController;
+  planningTab(){};
+  planningTab(wxWindow * parent, wxWindowID id = -1,
+	      const wxPoint & pos = wxDefaultPosition,
+	      const wxSize & size = wxDefaultSize,
+	      long style = wxTAB_TRAVERSAL);
+  virtual ~planningTab(){};
+	
+  wxSizer* sizerFull;
   
-  int mRobotIndex;
+  void OnSlider(wxCommandEvent &evt);
+  void OnButton(wxCommandEvent &evt);
+  virtual void GRIPStateChange();
+
+  // *************************************  
+  // Dynamic Simulation Variables
+
+  std::vector<Eigen::VectorXd> mBakedStates;
+  planning::Controller* mController;
+  wxCheckBox* checkShowCollMesh;
+  kinematics::BodyNode* selectedNode;
+
   std::vector<int> mArmDofs;
   Eigen::VectorXd mStartConf;
   Eigen::VectorXd mGoalConf;
   Eigen::VectorXd mPredefStartConf;
   Eigen::VectorXd mPredefGoalConf;
 
+  int mRobotIndex;
+  int mGroundIndex;
+
+  int mCurrentFrame;
+  
+  void bake();
+  void retrieveBakedState( int _frame );
+  void setTimeline();
+  void graspRRT();
+  void drawAxes(Eigen::VectorXd origin, double size);
+  void OnCheckShowCollMesh(wxCommandEvent &evt);
+  
+  virtual void GRIPEventSimulationBeforeTimestep(); /**< Implement to apply forces before simulating a dynamic step */
+  virtual void GRIPEventRender();
+  virtual void GRIPEventSceneLoaded();
+  virtual void GRIPEventSimulationAfterTimestep(); /**< Implement to save world states in simulation*/
+  virtual void GRIPEventSimulationStart(); 
+  
+  
   DECLARE_DYNAMIC_CLASS(planningTab)
   DECLARE_EVENT_TABLE()
 };

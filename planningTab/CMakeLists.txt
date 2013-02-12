@@ -32,8 +32,8 @@ link_directories(${GRIP_LIBRARY_DIRS})
 
 
 # Search all header and source files
-set ( planningTab_src planningTab.cpp planningTabApp.cpp Controller.cpp )
-set ( planningTab_hdr planningTab.h Controller.h )
+set ( planningTab_src planningTab.cpp planningTabApp.cpp Controller.cpp GraspRRT.cpp JointMover.cpp)
+set ( planningTab_hdr planningTab.h Controller.h GraspRRT.h JointMover.h)
 
 if(WIN32)
   set (wxWidgets_EXCLUDE_COMMON_LIBRARIES TRUE)

@@ -41,6 +41,8 @@
 #include <wx/wx.h>
 #include <GUI/Viewer.h>
 #include <GUI/GUI.h>
+#include <GUI/GRIPSlider.h>
+#include <GUI/GRIPFrame.h>
 #include <iostream>
 
 #include <collision/CollisionSkeleton.h>
@@ -55,78 +57,83 @@
 #include <planning/PathShortener.h>
 #include <planning/Trajectory.h>
 #include "Controller.h"
+#include "GraspRRT.h"
+// **********************
 
-using namespace std;
-
-// Define IDs for buttons
+/** Events */
 enum DynamicSimulationTabEvents {
-  id_button_SetStart = 8345,
-  id_button_SetGoal,
-  id_button_SetPredefStart,
-  id_button_SetPredefGoal,
-  id_button_RelocateObjects,
-  id_button_ShowStart,
-  id_button_ShowGoal,
-  id_button_Plan
+    id_button_DoPlanning = 8345,
+    id_button_RelocateObjects,
+    id_button_SetStart,
+    id_button_SetGoal,
+    id_button_SetPredefStart,
+    id_button_SetPredefGoal,
+    id_button_ShowStart,
+    id_button_ShowGoal,
+    id_button_Grasping,
+    id_button_SetTimeline,
+    id_checkbox_showcollmesh
 };
+using namespace std;
 
 // Handler for events
 BEGIN_EVENT_TABLE(planningTab, wxPanel)
-EVT_COMMAND (id_button_SetStart, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonSetStart)
-EVT_COMMAND (id_button_SetGoal, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonSetGoal)
-EVT_COMMAND (id_button_SetPredefStart, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonSetPredefStart)
-EVT_COMMAND (id_button_SetPredefGoal, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonSetPredefGoal)
-EVT_COMMAND (id_button_RelocateObjects, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonRelocateObjects)
-EVT_COMMAND (id_button_ShowStart, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonShowStart)
-EVT_COMMAND (id_button_ShowGoal, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonShowGoal)
-EVT_COMMAND (id_button_Plan, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::onButtonPlan)
+EVT_COMMAND(wxID_ANY, wxEVT_COMMAND_BUTTON_CLICKED, planningTab::OnButton)
+EVT_CHECKBOX(id_checkbox_showcollmesh, planningTab::OnCheckShowCollMesh)
+EVT_COMMAND (wxID_ANY, wxEVT_GRIP_SLIDER_CHANGE, planningTab::OnSlider)
 END_EVENT_TABLE()
 
 IMPLEMENT_DYNAMIC_CLASS(planningTab, GRIPTab)
 
+
+/**
+ * @function pushDemoTab
+ * @brief Constructor (TO BE USED WITH FURNITURE_2)
+ */
 planningTab::planningTab(wxWindow *parent, const wxWindowID id, const wxPoint& pos, const wxSize& size, long style) :
-  GRIPTab(parent, id, pos, size, style)
-{
-  // Create user interface
-  wxSizer* sizerFull= new wxBoxSizer(wxHORIZONTAL);
-  
-  wxStaticBox* ss1Box = new wxStaticBox(this, -1, wxT("Setup planning problem"));
-  wxStaticBox* ss2Box = new wxStaticBox(this, -1, wxT("Check"));
-  wxStaticBox* ss3Box = new wxStaticBox(this, -1, wxT("Execute"));
-  
-  wxStaticBoxSizer* ss1BoxS = new wxStaticBoxSizer(ss1Box, wxVERTICAL);
-  wxStaticBoxSizer* ss2BoxS = new wxStaticBoxSizer(ss2Box, wxVERTICAL);
-  wxStaticBoxSizer* ss3BoxS = new wxStaticBoxSizer(ss3Box, wxVERTICAL);
+GRIPTab(parent, id, pos, size, style) {
+    sizerFull = new wxBoxSizer(wxHORIZONTAL);
 
-  ss1BoxS->Add(new wxButton(this, id_button_SetStart, wxT("Set Start Conf")), 0, wxALL, 1); 
-  ss1BoxS->Add(new wxButton(this, id_button_SetGoal, wxT("Set Goal Conf")), 0, wxALL, 1); 
-  ss1BoxS->Add(new wxButton(this, id_button_SetPredefStart, wxT("Set Predef Start")), 0, wxALL, 1); 
-  ss1BoxS->Add(new wxButton(this, id_button_SetPredefGoal, wxT("Set Predef Goal")), 0, wxALL, 1); 
-  ss1BoxS->Add(new wxButton(this, id_button_RelocateObjects, wxT("Relocate objects")), 0, wxALL, 1);
-  ss2BoxS->Add(new wxButton(this, id_button_ShowStart, wxT("Show Start")), 0, wxALL, 1); 
-  ss2BoxS->Add(new wxButton(this, id_button_ShowGoal, wxT("Show Goal")), 0, wxALL, 1); 
-  ss3BoxS->Add(new wxButton(this, id_button_Plan, wxT("Do Planning")), 0, wxALL, 1); 
+    // Create Static boxes (outline of your Tab)
+    wxStaticBox* ss1Box = new wxStaticBox(this, -1, wxT("Planning"));
+    wxStaticBox* ss2Box = new wxStaticBox(this, -1, wxT("Check"));
+    
+    // Create sizers for these static boxes
+    wxStaticBoxSizer* ss1BoxS = new wxStaticBoxSizer(ss1Box, wxVERTICAL);
+    wxStaticBoxSizer* ss2BoxS = new wxStaticBoxSizer(ss2Box, wxVERTICAL);
+    checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Collision Mesh"));
+    
+    // Start and goal conf button
+    ss1BoxS->Add(new wxButton(this, id_button_SetPredefStart, wxT("Set Predef Start")), 0, wxALL, 1);
+    //ss1BoxS->Add(new wxButton(this, id_button_SetPredefGoal, wxT("Set Predef Goal")), 0, wxALL, 1);
+    ss1BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Test Grasping")), 0, wxALL, 1);
+    ss1BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
+    
+    // Check buttons (visualize the start and goal states)
+    ss2BoxS->Add(new wxButton(this, id_button_ShowStart, wxT("Show Start")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_SetTimeline, wxT("Set Timeline")), 0, wxALL, 1); 
+    
+    
+    // Add the boxes to their respective sizers
+    sizerFull->Add(ss1BoxS, 1, wxEXPAND | wxALL, 6);
+    sizerFull->Add(ss2BoxS, 1, wxEXPAND | wxALL, 6);
+    SetSizer(sizerFull);
 
-  sizerFull->Add(ss1BoxS, 1, wxEXPAND | wxALL, 6);
-  sizerFull->Add(ss2BoxS, 1, wxEXPAND | wxALL, 6);
-  sizerFull->Add(ss3BoxS, 1, wxEXPAND | wxALL, 6);
+    // Additional settings
+    mCurrentFrame = 0;
 
-  SetSizer(sizerFull);
+    mRobotIndex = 0; // We only simulate one robot in this demo so we know its index is 0
 
-  // Initialize variables
-  mRobotIndex = 0; // We only simulate one robot in this demo so we know its index is 0
-
-  // Set predefined start and goal configuration
-  mPredefStartConf.resize(7);
-  mPredefGoalConf.resize(7);
-  mPredefStartConf << -0.858702, -0.674395, 0.0, -0.337896, 0.0, 0.0, 0.0;
-  mPredefGoalConf << -0.69115, 0.121475, 0.284977, -1.02486, 0.0, 0.0, 0.0;
-  mStartConf = mPredefStartConf;
-  mGoalConf = mPredefGoalConf;
+    mPredefStartConf.resize(6);
+    mPredefGoalConf.resize(6);
+    mPredefStartConf << -0.858702, -0.674395, 0.0, -0.337896, 0.0, 0.0;
+    mPredefGoalConf << -0.69115, 0.121475, 0.284977, -1.02486, 0.0, 0.0;
+	
+    mStartConf = mPredefStartConf;
+    mGoalConf = mPredefGoalConf;
 }
 
 
-/// Gets triggered after a world is loaded
 void planningTab::GRIPEventSceneLoaded() {
   // Set initial configuration for the legs
   mWorld->getRobot(mRobotIndex)->getDof(19)->setValue(-10.0 * M_PI/180.0);
@@ -138,146 +145,335 @@ void planningTab::GRIPEventSceneLoaded() {
   mWorld->getRobot(mRobotIndex)->update();
 
   // Define right arm nodes
-  const string armNodes[] = {"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "rightUJoint", "rightPalmDummy"}; 
-  mArmDofs.resize(7);
+  const string armNodes[] = {"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "rightUJoint", "rightPalmDummy"};
+  //{"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "Body_RWP"}; 
+  mArmDofs.resize(6);
   for(int i = 0; i < mArmDofs.size(); i++) {
     mArmDofs[i] = mWorld->getRobot(mRobotIndex)->getNode(armNodes[i].c_str())->getDof(0)->getSkelIndex();
   }
+  
 }
 
+void planningTab::OnCheckShowCollMesh(wxCommandEvent &evt) {
+    int c;
+    for (c = 0; c < mWorld->getNumObjects(); ++c) {
+        if (mWorld->getObject(c)->getName() == "yellowCube") {
+            break;
+        }
+    }
+    selectedNode = mWorld->getObject(c)->getNode(0);
+}
+
+void planningTab::OnButton(wxCommandEvent & _evt) {
+
+    int slnum = _evt.GetId();
+
+    switch (slnum) {
+            /** Set start configuration hard-coded (right arm) */
+        case id_button_SetPredefStart:
+        {
+            mStartConf = mPredefStartConf;
+        }
+        break;
+
+            /** Show set start configuration */
+        case id_button_ShowStart:
+        {
+             cout << "Showing start conf for right arm: " << mStartConf.transpose() << endl;
+             mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mStartConf);
+             viewer->DrawGLScene();
+        }
+        break;
+
+        case id_button_Grasping:
+        {
+            graspRRT();
+        }
+        break;
+
+            /** Set Timeline */
+        case id_button_SetTimeline:
+        {
+            setTimeline();
+        }
+        break;
+
+            /** Default */
+        default:
+        {
+            printf("Default button \n");
+        }
+    }
+}
+
+void planningTab::graspRRT() {
+    // Look for object to grasp
+    std::string eeName = "rightPalmDummy";//"Body_RWP";//"rightMiddleProximal";
+    
+    int c;
+    for (c = 0; c < mWorld->getNumObjects(); ++c) {
+        if (mWorld->getObject(c)->getName() == "yellowCube") {
+            break;
+        }
+    }
+    // Get object position
+    double xpos, ypos, zpos;
+    mWorld->getObject(c)->getPositionXYZ(xpos, ypos, zpos);
+    VectorXd mObjPos(3); mObjPos << xpos, ypos, zpos;
+
+    // Store the actuated joints (all except the first 6 which are only a convenience to locate the robot in the world)
+    std::vector<int> actuatedDofs(mWorld->getRobot(mRobotIndex)->getNumDofs() - 6);
+    for (unsigned int i = 0; i < actuatedDofs.size(); i++) {
+        actuatedDofs[i] = i + 6;
+    }
+    
+    // Deactivate collision checking between the feet and the ground during planning
+    dynamics::SkeletonDynamics* ground = mWorld->getSkeleton("ground");
+    mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("leftFoot"), ground->getNode(1));
+    mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("rightFoot"), ground->getNode(1));
+
+
+    // Define PD controller gains
+    Eigen::VectorXd kI = 100.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
+    Eigen::VectorXd kP = 500.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
+    Eigen::VectorXd kD = 100.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
+
+    // Define gains for the ankle PD
+    std::vector<int> ankleDofs(2);
+    ankleDofs[0] = 27;
+    ankleDofs[1] = 28;
+    const Eigen::VectorXd anklePGains = -1000.0 * Eigen::VectorXd::Ones(2);
+    const Eigen::VectorXd ankleDGains = -200.0 * Eigen::VectorXd::Ones(2);
+
+    
+    mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mStartConf);
+    
+    // Create controller
+    mController = new planning::Controller(mWorld->getRobot(mRobotIndex), actuatedDofs, kP, kD, ankleDofs, anklePGains, ankleDGains);
+    // Initialize GraspRRT
+    planning::GraspRRT grasper(mWorld, mArmDofs, mRobotIndex, mStartConf, mObjPos, mWorld->getObject(c)->getNode(0), eeName);
+    
+    std::list<Eigen::VectorXd> path;
+    grasper.plan(path);
+    
+    //CHECKS
+    PRINT(path.size());
+    PRINT(mWorld->getObject(c)->getName());
+    
+    // Create trajectory
+    planning::PathShortener pathShortener(mWorld, mRobotIndex, mArmDofs);
+    pathShortener.shortenPath(path);
+    
+    const Eigen::VectorXd maxVelocity = 0.6 * Eigen::VectorXd::Ones(mArmDofs.size());
+    const Eigen::VectorXd maxAcceleration = 0.6 * Eigen::VectorXd::Ones(mArmDofs.size());
+    planning::Trajectory* trajectory = new planning::Trajectory(path, maxVelocity, maxAcceleration);
+    
+    std::cout << "-- Trajectory duration: " << trajectory->getDuration() << endl;
+    //mController->setTrajectory(trajectory, 0.1, trajectoryDofs);
+    mController->setTrajectory(trajectory, 0, mArmDofs);
+    
+    // Reactivate collision of feet with floor Body_LAR Body_RAR
+    mWorld->mCollisionHandle->getCollisionChecker()->activatePair(mWorld->getRobot(mRobotIndex)->getNode("leftFoot"), ground->getNode(1));
+    mWorld->mCollisionHandle->getCollisionChecker()->activatePair(mWorld->getRobot(mRobotIndex)->getNode("rightFoot"), ground->getNode(1));
+
+    printf("Controller time: %f \n", mWorld->mTime);
+}
 
 /// Before each simulation step we set the torques the controller applies to the joints
 void planningTab::GRIPEventSimulationBeforeTimestep() {
   mWorld->getRobot(mRobotIndex)->setInternalForces(mController->getTorques(mWorld->getRobot(mRobotIndex)->getPose(), mWorld->getRobot(mRobotIndex)->getQDotVector(), mWorld->mTime));
 }
 
+void planningTab::GRIPEventSimulationAfterTimestep() {
 
-/// Set start configuration to the configuration the arm is currently in
-void planningTab::onButtonSetStart(wxCommandEvent & _evt) {
-  if(!mWorld || mWorld->getNumRobots() < 1) {
-    cout << "No world loaded or world does not contain a robot." << endl;
-    return;
+  mCurrentFrame++;
+  if( mCurrentFrame % 30 == 0 ) {
+    bake();
   }
+}
+void planningTab::GRIPEventSimulationStart() {
 
-  mStartConf = mWorld->getRobot(mRobotIndex)->getConfig(mArmDofs);
-  cout << "Start Configuration: " << mStartConf.transpose() << endl;
 }
 
+void planningTab::setTimeline() {
 
-/// Set goal configuration to the configuration the arm is currently in
-void planningTab::onButtonSetGoal(wxCommandEvent & _evt) {
-  if(!mWorld || mWorld->getNumRobots() < 1) {
-    cout << "No world loaded or world does not contain a robot." << endl;
-    return;
-  }
-
-  mGoalConf = mWorld->getRobot(mRobotIndex)->getConfig(mArmDofs);
-  cout << "Goal Configuration: " << mGoalConf.transpose() << endl;
-}
-
-
-/// Reset start configuration to the predefined one
-void planningTab::onButtonSetPredefStart(wxCommandEvent & _evt) {
-  mStartConf = mPredefStartConf;
-}
-
-
-/// Reset goal configuration to the predefined one
-void planningTab::onButtonSetPredefGoal(wxCommandEvent & _evt) {
-  mGoalConf = mPredefGoalConf;
-}
-
-
-/// Move objects to obstruct the direct path between the predefined start and goal configurations
-void planningTab::onButtonRelocateObjects(wxCommandEvent & _evt) {
-
-  robotics::Object* orangeCube = (robotics::Object*)mWorld->getSkeleton("orangeCube");
-  robotics::Object* yellowCube = (robotics::Object*)mWorld->getSkeleton("yellowCube");
+  int numsteps = mBakedStates.size();
   
-  if(!orangeCube || !yellowCube) {
-    cout << "Did not find orange or yellow object. Exiting and no moving anything" << endl;
-    return;
-  }
+  double increment = mWorld->mTimeStep;
+  double totalTime = mWorld->mTime;
   
-  orangeCube->setPositionXYZ(0.30, -0.30, 0.83);
-  yellowCube->setPositionXYZ(0.30, -0.30, 0.935);
-  orangeCube->update();
-  yellowCube->update();
+  cout << "-->(+) Updating Timeline - Increment: " << increment << " Total T: " << totalTime << " Steps: " << numsteps << endl;
+  
+  frame->InitTimer( string("Planner"),increment );
+  
+  // Set the Time slider with the saved simulated frames
+  for( int i = 0; i < numsteps; ++i ) {
+    retrieveBakedState( i );
+    for (int j = 0; j < mWorld->getNumRobots(); j++) {
+      mWorld->getRobot(j)->update();
+    }
+    for (int j = 0; j < mWorld->getNumObjects(); j++) {
+      mWorld->getObject(j)->update();
+    }
+    frame->AddWorld( mWorld );
+    
+  }
+  printf("-- Finished setting timeline \n");
+} 
 
-  viewer->DrawGLScene();
+void planningTab::bake() {
+    mBakedStates.push_back(mWorld->getState());
+}
+
+/**
+ * @function retrieveBakedState
+ * @brief Return a vector with the poses stored at frame _frame
+ */
+void planningTab::retrieveBakedState( int _frame ) {
+    mWorld->setState(mBakedStates[_frame]);
+}
+
+/**
+ * @function OnSlider
+ * @brief Handles slider changes
+ */
+void planningTab::OnSlider(wxCommandEvent &evt) {
+
 }
 
 
-/// Show the currently set start configuration
-void planningTab::onButtonShowStart(wxCommandEvent & _evt) {
-  cout << "Showing start conf for right arm: " << mStartConf.transpose() << endl;
-  mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mStartConf);
-  viewer->DrawGLScene();
+// This function is called when an object is selected in the Tree View or other
+// global changes to the GRIP world. Use this to capture events from outside the tab.
+void planningTab::GRIPStateChange() {
+    if (selectedTreeNode == NULL) {
+        return;
+    }
+
+    string statusBuf;
+    string buf, buf2;
+    switch (selectedTreeNode->dType) {
+        case Return_Type_Object:
+            statusBuf = " Selected Object: ";
+            buf = "You clicked on object: ";
+
+            break;
+        case Return_Type_Robot:
+            statusBuf = " Selected Robot: ";
+            buf = "You clicked on robot: ";
+
+            break;
+        case Return_Type_Node:
+            statusBuf = " Selected Link:  of Robot: ";
+            buf = " Link:  of Robot: ";
+            // Do something here if you want to.  you get the idea...
+
+            break;
+        default:
+            fprintf(stderr, "someone else's problem.");
+            assert(0);
+            exit(1);
+    }
+    //frame->SetStatusText(wxString(statusBuf.c_str(), wxConvUTF8));
+    //sizerFull->Layout();
+}
+
+void planningTab::GRIPEventRender() {
+    glDisable(GL_FOG);
+    glEnable(GL_COLOR_MATERIAL);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    
+    glLineWidth(1.5f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POINT_SMOOTH);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glEnable( GL_TEXTURE_2D );
+    glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glBindTexture(GL_TEXTURE_2D, GL_TEXTURE_2D);
+    
+    mGroundIndex = 0;
+    //ECHO("RENDERING");
+     // draw collision meshes
+    if (checkShowCollMesh->IsChecked() && mWorld && selectedNode && selectedNode->getShape()) {
+        //ECHO("SHOWING MESHES");
+        renderer::RenderInterface* ri = &viewer->renderer;
+        kinematics::BodyNode* cnode = selectedNode;
+        kinematics::Shape* shape = selectedNode->getShape();
+        const aiScene* sc = shape->getVizMesh();
+        if (shape->getCollisionMesh() != NULL) { sc = shape->getCollisionMesh(); }
+
+        if (sc != NULL) {
+            int verts = 0;
+            const aiNode* nd = sc->mRootNode;
+            
+            //ECHO("SHAPE NOT NULL");
+            // put in the proper transform
+            glPushMatrix();
+            double M[16];
+            Eigen::Matrix4d worldTrans = selectedNode->getWorldTransform();
+            for(int i=0;i<4;i++)
+                for(int j=0;j<4;j++)
+                    M[j*4+i] = worldTrans(i, j);
+            glMultMatrixd(M);
+
+            for (unsigned int n = 0; n < nd->mNumMeshes; ++n) {
+                const struct aiMesh* mesh = sc->mMeshes[nd->mMeshes[n]];
+                for (unsigned int t = 0; t < mesh->mNumFaces; ++t) {
+                    const struct aiFace* face = &mesh->mFaces[t];
+                    glBegin(GL_LINE_STRIP);
+                    for(unsigned int i = 0; i < face->mNumIndices; i++) {
+                        int index = face->mIndices[i];
+                        glColor4d(0.0, 0.0, 1.0, 1.0);
+                        if(mesh->mNormals != NULL) 
+                            glNormal3fv(&mesh->mNormals[index].x);
+                        glVertex3fv(&mesh->mVertices[index].x);
+                        verts++;
+                    }
+                    glEnd();
+                }
+            }
+            glPopMatrix();
+        }
+
+        glPopMatrix();
+        glEnd();
+    }
+    
+    //draw GCP and graspPoint
+    if(checkShowCollMesh->IsChecked() && mWorld && GCP.norm() > 0 && graspPoint.norm() > 0){        
+        //draw axes origin = GCP
+        drawAxes(GCP, 0.2);
+        //ECHO("Drawing Axes");
+        //draw axes origin = graspPoint
+        drawAxes(graspPoint, 0.1);
+    }
+    glFlush();
+    
+}
+
+void planningTab::drawAxes(Eigen::VectorXd origin, double s){
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(origin(0) - s, origin(1), origin(2));
+    glVertex3f(origin(0) + s, origin(1), origin(2));
+
+    glColor3f(0, 0, 1);
+    glVertex3f(origin(0), origin(1) - s, origin(2));
+    glVertex3f(origin(0), origin(1) + s, origin(2));
+
+    glColor3f(0, 1, 0);
+    glVertex3f(origin(0), origin(1), origin(2) - s);
+    glVertex3f(origin(0), origin(1), origin(2) + s);
+    glEnd();
 }
 
 
-/// Show the currently set goal configuration
-void planningTab::onButtonShowGoal(wxCommandEvent & _evt) {
-  cout << "Showing goal conf for right arm: " << mGoalConf.transpose() << endl;
-  mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mGoalConf);
-  viewer->DrawGLScene();
-}
 
 
-/// Set initial dynamic parameters and call planner and controller
-void planningTab::onButtonPlan(wxCommandEvent & _evt) {
-
-  // Store the actuated joints (all except the first 6 which are only a convenience to locate the robot in the world)
-  std::vector<int> actuatedDofs(mWorld->getRobot(mRobotIndex)->getNumDofs() - 6);
-  for(unsigned int i = 0; i < actuatedDofs.size(); i++) {
-    actuatedDofs[i] = i + 6;
-  }
-  
-  // Deactivate collision checking between the feet and the ground during planning
-  dynamics::SkeletonDynamics* ground = mWorld->getSkeleton("ground");
-  mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("leftFoot"), ground->getNode(1));
-  mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("rightFoot"), ground->getNode(1));
-  
-  // Define PD controller gains
-  Eigen::VectorXd kI = 100.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
-  Eigen::VectorXd kP = 500.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
-  Eigen::VectorXd kD = 100.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
-
-  // Define gains for the ankle PD
-  std::vector<int> ankleDofs(2);
-  ankleDofs[0] = 27;
-  ankleDofs[1] = 28;
-  const Eigen::VectorXd anklePGains = -1000.0 * Eigen::VectorXd::Ones(2);
-  const Eigen::VectorXd ankleDGains = -2000.0 * Eigen::VectorXd::Ones(2);
-
-  // Set robot to start configuration
-  mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mStartConf);
-
-  // Create controller
-  mController = new planning::Controller(mWorld->getRobot(mRobotIndex), actuatedDofs, kP, kD, ankleDofs, anklePGains, ankleDGains);
-
-  // Call path planner
-  planning::PathPlanner<> pathPlanner(*mWorld);
-  std::list<Eigen::VectorXd> path;
-  if(!pathPlanner.planPath(mRobotIndex, mArmDofs, mStartConf, mGoalConf, path)) {
-    std::cout << "Path planner could not find a path." << std::endl;
-  }
-  else {
-    // Call path shortener
-    planning::PathShortener pathShortener(mWorld, mRobotIndex, mArmDofs);
-    pathShortener.shortenPath(path);
-
-    mWorld->getRobot(mRobotIndex)->update();
-
-    // Convert path into time-parameterized trajectory satisfying acceleration and velocity constraints
-    const Eigen::VectorXd maxVelocity = 0.6 * Eigen::VectorXd::Ones(mArmDofs.size());
-    const Eigen::VectorXd maxAcceleration = 0.6 * Eigen::VectorXd::Ones(mArmDofs.size());
-    planning::Trajectory* trajectory = new planning::Trajectory(path, maxVelocity, maxAcceleration);
-    std::cout << "-- Trajectory duration: " << trajectory->getDuration() << endl;
-    mController->setTrajectory(trajectory, 0.0, mArmDofs);
-  }
-  
-  // Reactivate collision of feet with floor
-  mWorld->mCollisionHandle->getCollisionChecker()->activatePair(mWorld->getRobot(mRobotIndex)->getNode("leftFoot"), ground->getNode(1));
-  mWorld->mCollisionHandle->getCollisionChecker()->activatePair(mWorld->getRobot(mRobotIndex)->getNode("rightFoot"), ground->getNode(1));
-}
+// Local Variables:
+// c-basic-offset: 2
+// End:
