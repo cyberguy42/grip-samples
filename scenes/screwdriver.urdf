@@ -1,0 +1,43 @@
+<object
+  name="screwdriver">
+  <link
+    name="Driver">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.14396" />
+      <inertia
+        ixx="0.000329030989627342"
+        ixy="-1.45362882194803E-21"
+        ixz="-2.86832438779764E-23"
+        iyy="-2.87798169580618E-21"
+        iyz="-0.000329030989627342"
+        izz="2.43537074374698E-20" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="1.5707963267949 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="/objects/Driver.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 0 0 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="/objects/Driver.STL" />
+      </geometry>
+    </collision>
+  </link>
+</object>

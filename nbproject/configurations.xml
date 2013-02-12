@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="84">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df name="grip-samples" root=".">
+      <df name="CMakeFiles">
+        <df name="CMakeTmp">
+        </df>
+        <df name="CompilerIdC">
+          <in>CMakeCCompilerId.c</in>
+          <in>a.out</in>
+        </df>
+        <df name="CompilerIdCXX">
+          <in>CMakeCXXCompilerId.cpp</in>
+          <in>a.out</in>
+        </df>
+        <df name="Progress">
+          <in>5</in>
+          <in>count.txt</in>
+        </df>
+        <in>CMakeCCompiler.cmake</in>
+        <in>CMakeCXXCompiler.cmake</in>
+        <in>CMakeDetermineCompilerABI_C.bin</in>
+        <in>CMakeDetermineCompilerABI_CXX.bin</in>
+        <in>CMakeOutput.log</in>
+        <in>CMakeSystem.cmake</in>
+      </df>
+      <df name="cubesTab">
+        <df name="CMakeFiles">
+          <df name="cubesTab.dir">
+            <in>CXX.includecache</in>
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.internal</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+        </df>
+        <in>cubesTab.cpp</in>
+        <in>cubesTab.h</in>
+        <in>cubesTabApp.cpp</in>
+      </df>
+      <df name="jacobianDemoTab">
+        <df name="CMakeFiles">
+          <df name="jacobianDemoTab.dir">
+            <df name="JTFollower">
+            </df>
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+        </df>
+        <df name="JTFollower">
+          <in>JTFollower.cpp</in>
+          <in>JTFollower.h</in>
+        </df>
+        <in>Controller.cpp</in>
+        <in>Controller.h</in>
+        <in>pushDemoTab.cpp</in>
+        <in>pushDemoTab.h</in>
+        <in>pushDemoTabApp.cpp</in>
+      </df>
+      <df name="planningTab">
+        <df name="CMakeFiles">
+          <df name="CMakeTmp">
+          </df>
+          <df name="CompilerIdC">
+            <in>CMakeCCompilerId.c</in>
+          </df>
+          <df name="CompilerIdCXX">
+            <in>CMakeCXXCompilerId.cpp</in>
+          </df>
+          <df name="planningTab.dir">
+          </df>
+        </df>
+        <in>Controller.cpp</in>
+        <in>Controller.h</in>
+        <in>GraspRRT.cpp</in>
+        <in>GraspRRT.h</in>
+        <in>JointMover.cpp</in>
+        <in>JointMover.h</in>
+        <in>planningTab.cpp</in>
+        <in>planningTab.h</in>
+        <in>planningTabApp.cpp</in>
+      </df>
+      <df name="scenes">
+        <df name="hubo_dae">
+        </df>
+        <df name="objects">
+        </df>
+      </df>
+      <df name="simulationHistoryTab">
+        <df name="CMakeFiles">
+          <df name="SimulationHistoryTab.dir">
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+        </df>
+        <in>SimulationHistoryTab.cpp</in>
+        <in>SimulationHistoryTab.h</in>
+        <in>SimulationHistoryTabApp.cpp</in>
+      </df>
+      <df name="tabEmpty">
+        <df name="CMakeFiles">
+          <df name="tabEmpty.dir">
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+        </df>
+        <in>tabEmpty.cpp</in>
+        <in>tabEmpty.h</in>
+        <in>tabEmptyApp.cpp</in>
+      </df>
+      <df name="tabTemplate">
+        <df name="CMakeFiles">
+          <df name="tabTemplate.dir">
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+        </df>
+        <in>tabTemplate.cpp</in>
+        <in>tabTemplate.h</in>
+        <in>tabTemplateApp.cpp</in>
+      </df>
+      <df name="visualizationTab">
+        <df name="CMakeFiles">
+          <df name="VisualizationTab.dir">
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
+          </df>
+          <in>CMakeDirectoryInformation.cmake</in>
+          <in>progress.marks</in>
+        </df>
+        <in>VisualizationTab.cpp</in>
+        <in>VisualizationTab.h</in>
+        <in>VisualizationTabApp.cpp</in>
+      </df>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>CMakeLists.txt</itemPath>
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>default</compilerSet>
+      </toolsSet>
+      <codeAssistance>
+      </codeAssistance>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+        </makeTool>
+      </makefileType>
+    </conf>
+  </confs>
+</configurationDescriptor>
