@@ -116,7 +116,6 @@ namespace planning {
         float randMult = (float) (1.0 / (double) (RAND_MAX));
         float probabGrasp = 0.1f;
         
-        
          //update GCP location
         Eigen::VectorXd handcoord(3);
         world->getRobot(robot)->getBodyNodePositionXYZ(EEName, handcoord[0], handcoord[1], handcoord[2]);

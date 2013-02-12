@@ -101,7 +101,7 @@ GRIPTab(parent, id, pos, size, style) {
     // Create sizers for these static boxes
     wxStaticBoxSizer* ss1BoxS = new wxStaticBoxSizer(ss1Box, wxVERTICAL);
     wxStaticBoxSizer* ss2BoxS = new wxStaticBoxSizer(ss2Box, wxVERTICAL);
-    checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Collision Mesh"));
+    checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Markers"));
     
     // Start and goal conf button
     ss1BoxS->Add(new wxButton(this, id_button_SetPredefStart, wxT("Set Predef Start")), 0, wxALL, 1);
@@ -155,13 +155,6 @@ void planningTab::GRIPEventSceneLoaded() {
 }
 
 void planningTab::OnCheckShowCollMesh(wxCommandEvent &evt) {
-    int c;
-    for (c = 0; c < mWorld->getNumObjects(); ++c) {
-        if (mWorld->getObject(c)->getName() == "yellowCube") {
-            break;
-        }
-    }
-    selectedNode = mWorld->getObject(c)->getNode(0);
 }
 
 void planningTab::OnButton(wxCommandEvent & _evt) {
@@ -207,20 +200,14 @@ void planningTab::OnButton(wxCommandEvent & _evt) {
 }
 
 void planningTab::graspRRT() {
-    // Look for object to grasp
+    
+    if(!selectedNode){
+        ECHO("\tERROR: Must select an object to grasp first!!");
+        return;
+    }
+    
     std::string eeName = "rightPalmDummy";//"Body_RWP";//"rightMiddleProximal";
     
-    int c;
-    for (c = 0; c < mWorld->getNumObjects(); ++c) {
-        if (mWorld->getObject(c)->getName() == "yellowCube") {
-            break;
-        }
-    }
-    // Get object position
-    double xpos, ypos, zpos;
-    mWorld->getObject(c)->getPositionXYZ(xpos, ypos, zpos);
-    VectorXd mObjPos(3); mObjPos << xpos, ypos, zpos;
-
     // Store the actuated joints (all except the first 6 which are only a convenience to locate the robot in the world)
     std::vector<int> actuatedDofs(mWorld->getRobot(mRobotIndex)->getNumDofs() - 6);
     for (unsigned int i = 0; i < actuatedDofs.size(); i++) {
@@ -231,7 +218,6 @@ void planningTab::graspRRT() {
     dynamics::SkeletonDynamics* ground = mWorld->getSkeleton("ground");
     mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("leftFoot"), ground->getNode(1));
     mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mWorld->getRobot(mRobotIndex)->getNode("rightFoot"), ground->getNode(1));
-
 
     // Define PD controller gains
     Eigen::VectorXd kI = 100.0 * Eigen::VectorXd::Ones(mWorld->getRobot(mRobotIndex)->getNumDofs());
@@ -245,20 +231,19 @@ void planningTab::graspRRT() {
     const Eigen::VectorXd anklePGains = -1000.0 * Eigen::VectorXd::Ones(2);
     const Eigen::VectorXd ankleDGains = -200.0 * Eigen::VectorXd::Ones(2);
 
-    
     mWorld->getRobot(mRobotIndex)->setConfig(mArmDofs, mStartConf);
     
     // Create controller
     mController = new planning::Controller(mWorld->getRobot(mRobotIndex), actuatedDofs, kP, kD, ankleDofs, anklePGains, ankleDGains);
+    
     // Initialize GraspRRT
-    planning::GraspRRT grasper(mWorld, mArmDofs, mRobotIndex, mStartConf, mObjPos, mWorld->getObject(c)->getNode(0), eeName);
+    planning::GraspRRT grasper(mWorld, mArmDofs, mRobotIndex, mStartConf, selectedNode->getWorldCOM(), selectedNode, eeName);
     
     std::list<Eigen::VectorXd> path;
     grasper.plan(path);
     
     //CHECKS
     PRINT(path.size());
-    PRINT(mWorld->getObject(c)->getName());
     
     // Create trajectory
     planning::PathShortener pathShortener(mWorld, mRobotIndex, mArmDofs);
@@ -291,6 +276,7 @@ void planningTab::GRIPEventSimulationAfterTimestep() {
     bake();
   }
 }
+
 void planningTab::GRIPEventSimulationStart() {
 
 }
@@ -348,15 +334,17 @@ void planningTab::GRIPStateChange() {
     if (selectedTreeNode == NULL) {
         return;
     }
-
     string statusBuf;
     string buf, buf2;
     switch (selectedTreeNode->dType) {
-        case Return_Type_Object:
+        case Return_Type_Object:{
             statusBuf = " Selected Object: ";
             buf = "You clicked on object: ";
-
+            robotics::Object* pObject = (robotics::Object*)(selectedTreeNode->data);
+            selectedNode = pObject->mRoot;
+            cout << "\tNOTE: Selected " <<"\"" << pObject->getName()<<"\"" << " to grasp!" << endl;
             break;
+        }
         case Return_Type_Robot:
             statusBuf = " Selected Robot: ";
             buf = "You clicked on robot: ";
@@ -389,7 +377,7 @@ void planningTab::GRIPEventRender() {
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_POINT_SMOOTH);
     
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0); 
     glEnable( GL_TEXTURE_2D );
     glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
@@ -470,9 +458,6 @@ void planningTab::drawAxes(Eigen::VectorXd origin, double s){
     glVertex3f(origin(0), origin(1), origin(2) + s);
     glEnd();
 }
-
-
-
 
 // Local Variables:
 // c-basic-offset: 2

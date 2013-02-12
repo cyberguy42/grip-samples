@@ -73,6 +73,7 @@ namespace planning {
         int tryObjectGrasp();
         int approachObject(Eigen::VectorXd startConfig, Eigen::VectorXd goalConfig, int loops);
         bool calculateGraspPose(Eigen::VectorXd &pose);
+        double calculateGraspScore(Eigen::VectorXd &grasp);
         double calculateMinDistance(Eigen::Vector3d &closest);
         double findAngle(Eigen::Vector3d a, Eigen::Vector3d b);
         
