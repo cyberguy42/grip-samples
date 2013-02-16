@@ -84,6 +84,7 @@ public:
   void setTimeline();
   void graspRRT();
   void drawAxes(Eigen::VectorXd origin, double size);
+  void drawAxesWithOrientation(Eigen::Matrix4d transformation, double s);
   void OnCheckShowCollMesh(wxCommandEvent &evt);
   
   virtual void GRIPEventSimulationBeforeTimestep(); /**< Implement to apply forces before simulating a dynamic step */

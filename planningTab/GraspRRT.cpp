@@ -75,10 +75,6 @@ namespace planning {
     {
         srand(time(NULL));
         jm = new JointMover(*world, robot, dofs, EEName, 0.02);
-
-        Eigen::VectorXd handcoord(3);
-        world->getRobot(robot)->getBodyNodePositionXYZ(EEName, handcoord[0], handcoord[1], handcoord[2]);
-        GCP << handcoord[0], handcoord[1], handcoord[2];
         
         //performance variables
         smallGap = std::numeric_limits<double>::infinity();
@@ -117,11 +113,8 @@ namespace planning {
         float probabGrasp = 0.1f;
         
          //update GCP location
-        Eigen::VectorXd handcoord(3);
-        world->getRobot(robot)->getBodyNodePositionXYZ(EEName, handcoord[0], handcoord[1], handcoord[2]);
-        GCP << handcoord[0], handcoord[1], handcoord[2];
-        //PRINT(GCP);
-               
+        world->getRobot(robot)->getBodyNodePositionXYZ(EEName, GCP[0], GCP[1], GCP[2]);
+       
         //int graspResult = tryObjectGrasp();
         Eigen::VectorXd goalPose(6);
         //find grasping pose

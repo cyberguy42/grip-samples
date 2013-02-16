@@ -143,7 +143,7 @@ void planningTab::GRIPEventSceneLoaded() {
   mWorld->getRobot(mRobotIndex)->getDof(27)->setValue(-10.0 * M_PI/180.0);
   mWorld->getRobot(mRobotIndex)->getDof(28)->setValue(-10.0 * M_PI/180.0);
   mWorld->getRobot(mRobotIndex)->update();
-
+  
   // Define right arm nodes
   const string armNodes[] = {"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "rightUJoint", "rightPalmDummy"};
   //{"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "Body_RWP"}; 
@@ -151,7 +151,6 @@ void planningTab::GRIPEventSceneLoaded() {
   for(int i = 0; i < mArmDofs.size(); i++) {
     mArmDofs[i] = mWorld->getRobot(mRobotIndex)->getNode(armNodes[i].c_str())->getDof(0)->getSkelIndex();
   }
-  
 }
 
 void planningTab::OnCheckShowCollMesh(wxCommandEvent &evt) {
@@ -206,7 +205,7 @@ void planningTab::graspRRT() {
         return;
     }
     
-    std::string eeName = "rightPalmDummy";//"Body_RWP";//"rightMiddleProximal";
+    std::string eeName = "rightPalm";//"Body_RWP";//"rightMiddleProximal";
     
     // Store the actuated joints (all except the first 6 which are only a convenience to locate the robot in the world)
     std::vector<int> actuatedDofs(mWorld->getRobot(mRobotIndex)->getNumDofs() - 6);
@@ -434,8 +433,8 @@ void planningTab::GRIPEventRender() {
     //draw GCP and graspPoint
     if(checkShowCollMesh->IsChecked() && mWorld && GCP.norm() > 0 && graspPoint.norm() > 0){        
         //draw axes origin = GCP
-        drawAxes(GCP, 0.2);
-        //ECHO("Drawing Axes");
+        drawAxesWithOrientation(mWorld->getRobot(mRobotIndex)->getNode("rightPalm")->getWorldTransform(), 0.2);
+        
         //draw axes origin = graspPoint
         drawAxes(graspPoint, 0.1);
     }
@@ -456,6 +455,37 @@ void planningTab::drawAxes(Eigen::VectorXd origin, double s){
     glColor3f(0, 1, 0);
     glVertex3f(origin(0), origin(1), origin(2) - s);
     glVertex3f(origin(0), origin(1), origin(2) + s);
+    glEnd();
+}
+
+void planningTab::drawAxesWithOrientation(Eigen::Matrix4d transformation, double s){
+    Eigen::Matrix4d basis1up, basis1down, basis2up, basis2down;
+    basis1up << s,  0.0, 0.0, 0,
+     				0.0, s,   0.0, 0,
+     				0.0, 0.0, s,   0,
+     				1.0, 1.0, 1.0, 1;
+     				
+    basis1down << -s,  0.0, 0.0, 0,
+     				0.0, -s,   0.0, 0,
+     				0.0, 0.0, -s,   0,
+     				1.0, 1.0, 1.0, 1;
+    
+    basis2up = transformation * basis1up;
+    basis2down = transformation * basis1down;
+    
+    
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(basis2down(0,0), basis2down(1,0), basis2down(2,0));
+    glVertex3f(basis2up(0,0), basis2up(1,0), basis2up(2,0));
+
+    glColor3f(0, 0, 1);
+    glVertex3f(basis2down(0,1), basis2down(1,1), basis2down(2,1));
+    glVertex3f(basis2up(0,1), basis2up(1,1), basis2up(2,1));
+
+    glColor3f(0, 1, 0);
+    glVertex3f(basis2down(0,2), basis2down(1,2), basis2down(2,2));
+    glVertex3f(basis2up(0,2), basis2up(1,2), basis2up(2,2));
     glEnd();
 }
 
