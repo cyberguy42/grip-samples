@@ -203,10 +203,10 @@ void pushDemoTab::OnButton(wxCommandEvent & _evt) {
 	mGoalPos.resize( mSizePos );
 	Eigen::Matrix<double, 6, 1> pose;
 	pose = mWorld->getObject( mGoalObjectIndex )->getRootTransform();
-	mGoalPos(0) = pose(0); mGoalPos(1) = pose(1); mGoalPos(2) = pose(2);
+	mGoalPos << pose;
 
 	std::cout<<"* Goal object: "<<mGoalObject<<" with index: "<<mGoalObjectIndex<<std::endl;
-	std::cout<<"* Goal Pos: "<< mGoalPos(0)<<" , "<< mGoalPos(1) << " , "<< mGoalPos(2)<<std::endl;
+	std::cout<<"* Goal Pos: "<< mGoalPos(0)<<" , "<< mGoalPos(1) << " , "<< mGoalPos(2)<<mGoalPos(3)<<" , "<< mGoalPos(4) << " , "<< mGoalPos(5)<<std::endl;
       }
     }      
     else {  
@@ -394,7 +394,7 @@ std::list<Eigen::VectorXd> pushDemoTab::getPath() {
   
   std::vector<Eigen::VectorXd> wsPath; 
   Eigen::VectorXd start = mStartConf; 
-  if( jt->GoToXYZ( start,  
+  if( jt->GoTo6D( start,  
 		   mGoalPos,  
 		   wsPath ) == true ) { 
     printf("Found solution JT! \n"); 

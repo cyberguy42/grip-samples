@@ -86,8 +86,13 @@ public:
   bool GoToXYZ( Eigen::VectorXd &_q, 
 		Eigen::VectorXd _targetXYZ, 
 		std::vector<Eigen::VectorXd> &_workspacePath );
+
+  bool GoTo6D( Eigen::VectorXd &_q, 
+		Eigen::VectorXd _target6D, 
+		std::vector<Eigen::VectorXd> &_workspacePath );
   Eigen::VectorXd GetXYZ( Eigen::VectorXd _q );
-  
+  Eigen::VectorXd Get6D( Eigen::VectorXd _q );
+
  private:
   /// Member variables
   bool mCopyWorld;

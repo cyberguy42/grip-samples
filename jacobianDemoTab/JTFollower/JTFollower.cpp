@@ -90,7 +90,7 @@ std::vector< Eigen::VectorXd > JTFollower::PlanPath( const Eigen::VectorXd &_sta
   q = _start;
   
   for( size_t i = 1; i < numPoints; ++i ) { // start from 1 since 0 is the current start position
-    if( GoToXYZ( q, _workspacePath[i], configPath ) == false ) {
+    if( GoTo6D( q, _workspacePath[i], configPath ) == false ) {
       printf(" --(x) An error here, stop following path \n"); break;
     }
   } 
@@ -106,12 +106,17 @@ std::vector< Eigen::VectorXd > JTFollower::PlanPath( const Eigen::VectorXd &_sta
 Eigen::MatrixXd JTFollower::GetPseudoInvJac( Eigen::VectorXd _q ) {
   printf("Num Dependent DOF minus 6D0F is : %d \n", mEENode->getNumDependentDofs() - 6 );
   Eigen::MatrixXd Jaclin = mEENode->getJacobianLinear().topRightCorner( 3, mLinks.size() );
-  std::cout<< "Jaclin: \n"<<Jaclin << std::endl;
-  Eigen::MatrixXd JaclinT = Jaclin.transpose();
+  Eigen::MatrixXd Jacang = mEENode->getJacobianAngular().topRightCorner( 3, mLinks.size() );
+  std::cout<< "Jaclin: \n"<<Jaclin << "Jacang: \n" << Jacang << std::endl;
+  
+  Eigen::MatrixXd Jac(Jaclin.rows() + Jacang.rows(), Jaclin.cols());
+  Jac << Jaclin, Jacang;
+ 
+  Eigen::MatrixXd JacT = Jac.transpose();
   Eigen::MatrixXd Jt;
-  Eigen::MatrixXd JJt = (Jaclin*JaclinT);
+  Eigen::MatrixXd JJt = (Jac*JacT);
   Eigen::FullPivLU<Eigen::MatrixXd> lu(JJt);
-  Jt = JaclinT*( lu.inverse() );
+  Jt = JacT*( lu.inverse() );
   std::cout<< "Jaclin pseudo inverse: \n"<<Jt << std::endl;  
   return Jt;
 }
@@ -155,6 +160,45 @@ bool JTFollower::GoToXYZ( Eigen::VectorXd &_q,
 }
 
 /**
+ * @function GoTo6D
+ */
+bool JTFollower::GoTo6D( Eigen::VectorXd &_q, 
+			  Eigen::VectorXd _target6D, 
+			  std::vector<Eigen::VectorXd> &_workspacePath ) {
+
+  Eigen::VectorXd d6D;
+  Eigen::VectorXd dConfig;
+  int iter;
+  mWorld->getRobot(mRobotId)->update();
+  
+  //-- Initialize
+  d6D = ( _target6D - Get6D(_q) ); // GetXYZ also updates the config to _q, so Jaclin use an updated value
+  iter = 0;
+  printf("New call to GoTo6D: d6D: %f  \n", d6D.norm() );
+  while( d6D.norm() > mWorkspaceThresh && iter < mMaxIter ) {
+    printf("6D Error: %f \n", d6D.norm() );
+    Eigen::MatrixXd Jt = GetPseudoInvJac(_q);
+    dConfig = Jt*d6D;
+    printf("dConfig : %.3f \n", dConfig.norm() );
+    if( dConfig.norm() > mConfigStep ) {
+      double n = dConfig.norm();
+      dConfig = dConfig *(mConfigStep/n);
+      printf("NEW dConfig : %.3f \n", dConfig.norm() );
+    }
+    _q = _q + dConfig;
+    _workspacePath.push_back( _q );
+    
+    d6D = (_target6D - Get6D(_q) );
+    iter++;
+  }
+  
+  if( iter >= mMaxIter ) { return false; }
+  else { return true; }
+  
+}
+
+
+/**
  * @function GetXYZ
  */
 Eigen::VectorXd JTFollower::GetXYZ( Eigen::VectorXd _q ) {
@@ -168,5 +212,25 @@ Eigen::VectorXd JTFollower::GetXYZ( Eigen::VectorXd _q ) {
   Eigen::VectorXd qXYZ(3); qXYZ << qTransform(0,3), qTransform(1,3), qTransform(2,3);
   
   return qXYZ;
+}
+ 
+
+
+/**
+ * @function Get6D
+ */
+Eigen::VectorXd JTFollower::Get6D( Eigen::VectorXd _q ) {
+
+	
+  // Get current XYZ position and orientation
+  mWorld->getRobot(mRobotId)->setConfig( mLinks, _q );
+  mWorld->getRobot(mRobotId)->update();
+  
+  Eigen::MatrixXd qTransform = mEENode->getWorldTransform();
+  Eigen::Matrix3d rotationM = qTransform.topLeftCorner(3,3);
+  Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
+  Eigen::VectorXd q6D(6); q6D << qTransform(0,3), qTransform(1,3), qTransform(2,3), rotation(0), rotation(1), rotation(2);
+  
+  return q6D;
 }
  

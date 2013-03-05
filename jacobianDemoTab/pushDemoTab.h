@@ -72,7 +72,7 @@ public:
 
   static const string mRA_Nodes[];
   int static const mRA_NumNodes = 6;
-  int static const mSizePos = 3;
+  int static const mSizePos = 6;
 
   Eigen::VectorXd mStartConf;
   Eigen::VectorXd mGoalPos;
