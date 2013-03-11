@@ -64,6 +64,9 @@ public:
   void OnSlider(wxCommandEvent &evt);
   void OnButton(wxCommandEvent &evt);
   void GRIPStateChange();
+  void GRIPEventRender();
+  void drawAxesWithTransformation(Eigen::Matrix4d transformation, double s);
+  //void drawAxesWithOrientation(Eigen::VectorXd transformation, double s);
 
   // *************************************  
   // Dynamic Simulation Variables

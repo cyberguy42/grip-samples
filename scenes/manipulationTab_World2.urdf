@@ -13,11 +13,7 @@
   </entity>
 
   <entity model="bar" name="bar">
-    <origin xyz="0.33 -0.22 0.77" rpy="1.57 0.0 0.0"/>
-  </entity>
-
-  <entity model="dumbbell" name="dumbbell">
-    <origin xyz="0.45 -0.1 0.77" rpy="1.57 0.0 0.0"/>
+    <origin xyz="0.33 -0.22 1.05" rpy="-1.57 0.0 0.0"/>
   </entity>
 
 </world>

@@ -142,7 +142,7 @@ pushDemoTab::pushDemoTab(wxWindow *parent, const wxWindowID id,
   // Start and Conf with furniture_2
   mPredefStartConf <<  -1.20687,  -1.11899,  0,  0,  0,  0 ;
   mGoalObject = "smallRedBall";
-
+	mGoalObjectIndex = -1;
 }
 
 
@@ -412,6 +412,7 @@ std::list<Eigen::VectorXd> pushDemoTab::getPath() {
 }
 
 
+
 /**
  * @function GRIPEventSimulationBeforeTimeStep
  * @brief Before each sim step we must set the internal forces 
@@ -482,4 +483,123 @@ void pushDemoTab::GRIPStateChange() {
   //sizerFull->Layout();
 }
 
+void pushDemoTab::GRIPEventRender() {
+    glDisable(GL_FOG);
+    glEnable(GL_COLOR_MATERIAL);
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    
+    glLineWidth(1.5f);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POINT_SMOOTH);
+    
+    glActiveTexture(GL_TEXTURE0); 
+    glEnable( GL_TEXTURE_2D );
+    glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glBindTexture(GL_TEXTURE_2D, GL_TEXTURE_2D);
+    
+    mGroundIndex = 0;
+   
+    //draw GCP and graspPoint
+    if(mWorld){        
+        drawAxesWithTransformation(mWorld->getRobot(mRobotIndex)->getNode(mEEId)->getWorldTransform(), 0.08);
 
+			//robotics::Robot* testtarget = mWorld->getObject( mGoalObjectIndex );
+	/*
+			kinematics::Skeleton* target1 = mWorld->getSkeleton(mGoalObjectIndex);
+			kinematics::Skeleton* target2 = mWorld->getSkeleton(mGoalObject);
+
+			kinematics::BodyNode* target1node = target1->getRoot();
+			kinematics::BodyNode* target2node = target2->getRoot();
+
+			Eigen::Matrix4d transf1 = target1node->getWorldTransform();
+			Eigen::Matrix4d transf2 = target2node->getWorldTransform();
+
+			cout << "\nTransf1: \n" << transf1 << endl;
+			cout << "\nTransf2: \n" << transf2;
+			//cout << "\n Hello.\n";
+	*/
+			cout << "\n eef transf: \n" << mWorld->getRobot(mRobotIndex)->getNode(mEEId)->getWorldTransform() << endl;
+		if(mGoalObjectIndex != -1)
+		{	
+			cout << mWorld->getSkeleton(mGoalObject)->getRoot()->getWorldTransform() << endl;
+			//kinematics::Joint *joint;
+			//joint = testtarget->getRoot()->getParentJoint();
+			//mWorld->getObject( mGoalObjectIndex )->getRoot() ->getWorldTransfrom();
+
+        	drawAxesWithTransformation(mWorld->getSkeleton(mGoalObject)->getRoot()->getWorldTransform(), 0.15);
+		}
+	
+    }
+    glFlush();
+    
+}
+
+
+/*
+void pushDemoTab::drawAxesWithOrientation(Eigen::VectorXd orientation, double s)
+{
+	cout << orientation(0) << ", " << orientation(1) << ", " << orientation(2) << ", " << orientation(3) << ", " << orientation(4) << ", " << orientation(5) << endl;
+
+	Eigen::Matrix4d transformation;
+	Eigen::Matrix3f rotation = Eigen::AngleAxisf(orientation(3), Vector3f::UnitZ())
+	* Eigen::AngleAxisf(orientation(4), Vector3f::UnitY())
+	* Eigen::AngleAxisf(orientation(5), Vector3f::UnitZ());
+	
+	cout << rotation;
+
+	utils::rotation::RotationOrder order =
+	
+
+	int rows=4, cols=4;
+
+	transformation << rotation.finished(),
+	MatrixXf::Zero(3,1),
+	MatrixXf::Zero(1,3),
+	MatrixXf::Identity(1,1);
+	cout << transformation;
+	
+	transformation( << orientation(0), orientation(1), orientation(2);
+
+
+	transformation.topRightCorner<3,1>() = translation.transpose();
+	
+	drawAxesWithTransformation(transformation, s);
+
+}
+
+*/
+
+void pushDemoTab::drawAxesWithTransformation(Eigen::Matrix4d transformation, double s){
+    Eigen::Matrix4d basis1up, basis1down, basis2up, basis2down;
+    basis1up << 	s,  0.0, 0.0, 0,
+     			0.0, s,   0.0, 0,
+     			0.0, 0.0, s,   0,
+     			1.0, 1.0, 1.0, 1;
+     				
+    basis1down << 	-s,  0.0, 0.0, 0,
+     			0.0, -s,   0.0, 0,
+     			0.0, 0.0, -s,   0,
+     			1.0, 1.0, 1.0, 1;
+    
+    basis2up = transformation * basis1up;
+    basis2down = transformation * basis1down;
+    
+    
+    glBegin(GL_LINES);
+    glColor3f(1, 0, 0);
+    glVertex3f(basis2down(0,0), basis2down(1,0), basis2down(2,0));
+    glVertex3f(basis2up(0,0), basis2up(1,0), basis2up(2,0));
+
+    glColor3f(0, 0, 1);
+    glVertex3f(basis2down(0,1), basis2down(1,1), basis2down(2,1));
+    glVertex3f(basis2up(0,1), basis2up(1,1), basis2up(2,1));
+
+    glColor3f(0, 1, 0);
+    glVertex3f(basis2down(0,2), basis2down(1,2), basis2down(2,2));
+    glVertex3f(basis2up(0,2), basis2up(1,2), basis2up(2,2));
+    glEnd();
+}
