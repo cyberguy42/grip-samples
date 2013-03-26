@@ -92,7 +92,7 @@ END_EVENT_TABLE()
 IMPLEMENT_DYNAMIC_CLASS(pushDemoTab, GRIPTab)
 
 // Define right arm nodes
-string const pushDemoTab::mRA_Nodes[mRA_NumNodes] = {"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "Body_RWP"}; 
+string const pushDemoTab::mRA_Nodes[mRA_NumNodes] = {"Body_Hip", "Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "Body_RWP"}; //waist: body_hip
 
 /**
  * @function pushDemoTab
@@ -140,7 +140,7 @@ pushDemoTab::pushDemoTab(wxWindow *parent, const wxWindowID id,
   mPredefStartConf.resize( mRA_NumNodes );
   
   // Start and Conf with furniture_2
-  mPredefStartConf <<  -1.20687,  -1.11899,  0,  0,  0,  0 ;
+  mPredefStartConf <<  0, -1.20687,  -1.11899,  0,  0,  0,  0 ;	//with waist-extra 0 at front
   mGoalObject = "smallRedBall";
 	mGoalObjectIndex = -1;
 }

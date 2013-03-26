@@ -74,7 +74,7 @@ public:
   planning::Controller* mController;
 
   static const string mRA_Nodes[];
-  int static const mRA_NumNodes = 6;
+  int static const mRA_NumNodes = 7;	//waist: 7 without 6
   int static const mSizePos = 6;
 
   Eigen::VectorXd mStartConf;
