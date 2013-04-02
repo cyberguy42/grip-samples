@@ -202,6 +202,40 @@ namespace planning {
         
         return min_distance;
     }
+
+
+
+	void Grasper::closeHandTorqueBased(Eigen::VectorXd* torques) {
+        int fingers = robot->getNode(EEName.c_str())->getNumChildJoints();
+        vector<int> jointDirections;
+        
+        //first build list of joints
+        this->populateEndEffIds(fingers, joints, jointDirections);
+  
+        int jointID = 0;
+        float torqueValue = -.001;
+			
+			//iterate through each finger
+				//iterate through each joint and check collisions, apply torque appropriately
+            //iterate through each end-effector joint i.e. 15 joints = 5 x 3 joint per finger
+ 	
+ 		int j = 0;
+        for(int i = 0; i < hand_dofs.size(); i++, j = i % 3)
+        {
+        	int index = hand_dofs.at(i);
+        	float eachTorque;
+        	if(j==0)
+        		eachTorque = torqueValue;
+        	else if(j==1)
+        		eachTorque = torqueValue/2;
+        	else
+        		eachTorque = torqueValue/4;
+        		
+        	cout << index << "\n";
+        	(*torques)[index] = torqueValue;
+        }
+
+    }
     
     /// Modifications of idea provided by Asfour et. al. GraspRRT on Robotics and Automation Magazine, 2012
     vector<ContactPoint> Grasper::closeHandPositionBased(double step, kinematics::BodyNode* target) {
@@ -342,6 +376,7 @@ namespace planning {
         startConfig = start;
     }
     
+
     /// Method creates a list of joints and a vector with their respective directions-robot dependent-; populates the hand_dofs vector
     void Grasper::populateEndEffIds(int fingers, list<kinematics::Joint*> &js, vector<int> &jointDirections){
         //Clear if already has been called

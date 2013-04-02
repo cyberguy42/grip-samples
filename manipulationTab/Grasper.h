@@ -72,6 +72,7 @@ namespace planning {
         void init(std::vector<int> dofs, Eigen::VectorXd start, kinematics::BodyNode* objectNode, double step);
         void plan(std::list<Eigen::VectorXd> &path, std::vector<int> &totaldofs);
         double findClosestGraspingPoint(Eigen::Vector3d &closest, kinematics::BodyNode* object);
+		void closeHandTorqueBased(Eigen::VectorXd* torques);        
         vector<collision_checking::ContactPoint> closeHandPositionBased(double stepSize, kinematics::BodyNode* target);
         void openHand();
         std::vector<int> getHandDofs();
