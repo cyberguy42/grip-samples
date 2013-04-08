@@ -213,7 +213,7 @@ namespace planning {
         this->populateEndEffIds(fingers, joints, jointDirections);
   
         int jointID = 0;
-        float torqueValue = -.001;
+        float torqueValue = -.0001;
 			
 			//iterate through each finger
 				//iterate through each joint and check collisions, apply torque appropriately
@@ -225,11 +225,11 @@ namespace planning {
         	int index = hand_dofs.at(i);
         	float eachTorque;
         	if(j==0)
-        		eachTorque = torqueValue;
+        		eachTorque = -.001; //torqueValue;
         	else if(j==1)
-        		eachTorque = torqueValue/2;
+        		eachTorque = 0; //torqueValue/2;
         	else
-        		eachTorque = torqueValue/4;
+        		eachTorque = 0;//torqueValue/4;
         		
         	cout << index << "\n";
         	(*torques)[index] = torqueValue;
@@ -403,4 +403,147 @@ namespace planning {
             hand_dofs.push_back(fingerJoint->getChildNode()->getChildJoint(0)->getChildNode()->getChildJoint(0)->getDof(0)->getSkelIndex());
         }
     }
+    
+    
+    int Grasper::tryToPlan(list<VectorXd> &path, vector<int> &totalDofs)
+    {
+    	loadGrasps();
+    	for(int i = 0; i < objectGrasps.size(); i++)
+    	{
+    		int result = tryGrasp(&objectGrasps.at(i), path, totalDofs);
+    		if(result)
+    			return 1;
+    	}
+    	return 0;
+    }
+    
+    /// Attempt a grasp at a target object
+    int Grasper::tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs) {
+		path.clear();
+		//start with gcp offset:
+		//offset grasping point by virtual grasp center point (GCP) in robot's end effector
+        Eigen::Matrix4d effTrans = robot->getNode(EEName.c_str())->getLocalInvTransform();
+        VectorXd prod(4); prod << gcpVirtualLoc, 1;
+        prod = effTrans * prod;
+        //VectorXd gcpOff(6); gcpOff << prod(0), prod(1), prod(2),0,0,0;
+        Eigen::Matrix4d gcpOff = Eigen::Matrix4d::Zero();
+        gcpOff.col(3) = prod;
+		
+		//get transformation matrix for pose of hand relative to object
+		Eigen::Quaterniond quatAng(grasp->r0, grasp->r1, grasp->r2, grasp->r3);
+		
+		Eigen::Matrix3d rotMat = Eigen::Matrix3d(quatAng);
+		Eigen::Matrix4d relTransf = Eigen::Matrix4d::Identity();
+		relTransf.topLeftCorner(3,3) = rotMat;
+		relTransf(0,3) = grasp->xCoord;
+		relTransf(1,3) = grasp->yCoord;
+		relTransf(2,3) = grasp->zCoord;
+		
+		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
+		
+		//now transform gcp offset to relative hand to object pose to object to world.
+		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf * gcpOff;
+		
+		Eigen::Matrix3d rotationM = globalGraspPose.topLeftCorner(3,3);
+		Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
+		//get pose
+		Eigen::VectorXd graspPose(6); graspPose << globalGraspPose(0,3), globalGraspPose(1,3), globalGraspPose(2,3), rotation(0), rotation(1), rotation(2);
+        
+        //perform translation Jacobian towards grasping point computed
+        VectorXd goalPose(6);
+        if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
+        	return 0;
+        
+        //shorten path
+        shortener->shortenPath(path);
+        
+        //try to close hand;
+        totalDofs = dofs;
+        closeHandPositionBased(0.1, objectNode);
+ 
+        //merge DoFs to include hand closure configs in path
+        totalDofs.insert(totalDofs.end(), hand_dofs.begin(), hand_dofs.end());
+        
+        //increase size of every vector in path
+        for(list<VectorXd>::iterator it = path.begin(); it != path.end(); it++){
+            VectorXd & v (*it);
+            v.conservativeResize(totalDofs.size()); 
+            v.segment(dofs.size(),hand_dofs.size()) = VectorXd::Zero(hand_dofs.size(), 1);
+        }
+        path.push_back(robot->getConfig(totalDofs));
+        ECHO("Note: Added closed hand config to path!");
+        
+        //move grasped object around
+        list<VectorXd> targetPoints; 
+        
+        //For all objects except for the life saver and the driving wheel 
+        VectorXd v(3); v << 0.33,-0.10, 1.0; 
+        VectorXd w(3); w << 0.33,-0.16, 1.0; 
+        
+        //For life saver
+        //VectorXd v(3); v << 0.33, -0.27, 1.0;
+        //VectorXd w(3); w << 0.33, -0.16, 1.2;
+        
+        //For driving wheel
+        //VectorXd v(3); v << 0.30, 0.04, 0.7;
+        //VectorXd w(3); w << 0.30, 0.04, 0.9;
+        
+        targetPoints.push_back(v);
+        targetPoints.push_back(w);
+       
+        VectorXd backPose(6);
+        list<VectorXd> path_back;
+       
+        // move to as many target points as wished and store paths
+        for(list<VectorXd>::iterator loc = targetPoints.begin(); loc != targetPoints.end(); loc++){
+            VectorXd & t(*loc);
+            path_back.clear();
+           
+            jm->GoToXYZRPY(robot->getConfig(dofs), t, backPose, path_back);
+            shortener->shortenPath(path_back);
+            for(list<VectorXd>::iterator it = path_back.begin(); it != path_back.end(); it++){
+                    VectorXd & v (*it);
+                    v.conservativeResize(totalDofs.size()); 
+                    v.segment(dofs.size(),hand_dofs.size()) = robot->getConfig(hand_dofs);
+
+                    //merge lists
+                    path.push_back(v);
+            }
+        }
+        //open hand at the end and store such configuration
+        openHand();
+        path.push_back(robot->getConfig(totalDofs));
+        
+        //reset robot to start configuration
+        robot->setConfig(dofs, startConfig);
+        return 1;	//better, return quality
+    }
+    
+
+    
+    int Grasper::loadGrasps()
+    {
+        //todo: auto load name from object
+		float f;
+		FILE * pFile;
+
+		pFile = fopen ("grasps/gun.txt","r");
+		int unknown;
+		
+		objectGrasps.clear();
+		
+		int keepGoing = 1;
+		while(keepGoing)
+		{
+			graspStruct newGrasp;
+			keepGoing = fscanf(pFile, "%u %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n%u %f %f %f %f %f %f %f\n", &newGrasp.numFingers, &newGrasp.thumb0, &newGrasp.thumb1, &newGrasp.thumb2, &newGrasp.point0, &newGrasp.point1, &newGrasp.point2, &newGrasp.middle0, &newGrasp.middle1, &newGrasp.middle2, &newGrasp.ring0, &newGrasp.ring1, &newGrasp.ring2, &newGrasp.pinky0, &newGrasp.pinky1, &newGrasp.pinky2, &unknown, &newGrasp.xCoord, &newGrasp.yCoord, &newGrasp.zCoord, &newGrasp.r0, &newGrasp.r1, &newGrasp.r2, &newGrasp.r3);
+			
+			if(keepGoing)
+			{
+				objectGrasps.push_back(newGrasp);
+			}
+		}
+		
+		fclose (pFile);
+	}
 }

@@ -69,6 +69,11 @@ namespace planning {
         Grasper(robotics::World* world, robotics::Robot* r, std::string mEEName);
         virtual ~Grasper();
         
+        typedef struct {
+   			int numFingers;
+   			float thumb0, thumb1, thumb2, point0, point1, point2, middle0, middle1, middle2, ring0, ring1, ring2, pinky0, pinky1, pinky2, xCoord, yCoord, zCoord, r0, r1, r2, r3;
+		} graspStruct;
+		
         void init(std::vector<int> dofs, Eigen::VectorXd start, kinematics::BodyNode* objectNode, double step);
         void plan(std::list<Eigen::VectorXd> &path, std::vector<int> &totaldofs);
         double findClosestGraspingPoint(Eigen::Vector3d &closest, kinematics::BodyNode* object);
@@ -82,12 +87,15 @@ namespace planning {
         Eigen::Vector3d getGCPXYZ();
         Eigen::Matrix4d getGCPTransform();
         void setStartConfig(Eigen::VectorXd start);
+        int loadGrasps();
+        int tryToPlan(std::list<Eigen::VectorXd> &path, std::vector<int> &totaldofs);
+        int tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs);
         
     protected:
         robotics::World* world;
         JointMover* jm;
         planning::PathShortener* shortener;
-        
+		vector<graspStruct> objectGrasps;
         robotics::Robot* robot;
         std::vector<int> dofs;
         std::vector<int> hand_dofs;

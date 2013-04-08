@@ -266,7 +266,7 @@ void manipulationTab::grasp() {
     // Perform grasp planning; now really it's just Jacobian translation
     std::list<Eigen::VectorXd> path;
     std::vector<int> mTotalDofs;
-    grasper->plan(path, mTotalDofs);
+    grasper->tryToPlan(path, mTotalDofs);
     
     // CHECK
     cout << "Offline Plan Size: " << path.size() << endl;
@@ -332,7 +332,7 @@ void manipulationTab::GRIPEventSimulationBeforeTimestep() {
 
 	cout << "torques:\n" << positionTorques << "\n\n";
 	
-    int closeHand = 1;
+    int closeHand = 0;
     if(closeHand)
 	{
 		grasper->closeHandTorqueBased(&positionTorques);
