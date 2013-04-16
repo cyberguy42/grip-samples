@@ -86,6 +86,8 @@ namespace planning {
         Eigen::Vector3d getGraspingPoint();
         Eigen::Vector3d getGCPXYZ();
         Eigen::Matrix4d getGCPTransform();
+        vector<Eigen::Matrix4d> getTargetGCPTransforms();
+        vector<Eigen::VectorXd> getTargetGraspPoses();
         void setStartConfig(Eigen::VectorXd start);
         int loadGrasps();
         int tryToPlan(std::list<Eigen::VectorXd> &path, std::vector<int> &totaldofs);
@@ -106,6 +108,8 @@ namespace planning {
         std::string EEName;
         Eigen::Vector3d graspPoint;
         Eigen::Vector3d gcpVirtualLoc;
+        vector<Eigen::Matrix4d> targetTransforms;
+        vector<Eigen::VectorXd> targetPoses;
         
     private:
         void populateEndEffIds(int fingers, list<kinematics::Joint*> &joints, vector<int> &jointDirections);

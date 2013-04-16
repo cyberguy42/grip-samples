@@ -69,6 +69,7 @@ public:
   void onButtonOpenHand(wxCommandEvent &evt);
   void onButtonCloseHand(wxCommandEvent &evt);
   void onCheckShowCollMesh(wxCommandEvent &evt);
+  void onButtonNextGrasp(wxCommandEvent &evt);
   
   void grasp();
   void retryGrasp();
@@ -80,6 +81,8 @@ public:
   wxCheckBox* checkShowCollMesh;
   kinematics::BodyNode* selectedNode;
   robotics::Robot* mRobot;
+  
+  int shownGraspIndex = 0;
   
   std::vector<int> mArmDofs;
   Eigen::VectorXd mStartConf;

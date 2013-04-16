@@ -72,7 +72,8 @@ enum DynamicSimulationTabEvents {
     id_button_OpenHand,
     id_button_CloseHand,
     id_label_Inst,
-    id_checkbox_showcollmesh
+    id_checkbox_showcollmesh,
+    id_button_next_grasp
 };
 using namespace std;
 
@@ -83,6 +84,7 @@ EVT_COMMAND(id_button_SetStart, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::o
 EVT_COMMAND(id_button_ShowStart, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonShowStart)
 EVT_COMMAND(id_button_Grasping, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonDoGrasping)
 EVT_COMMAND(id_button_OpenHand, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonOpenHand)
+EVT_COMMAND(id_button_next_grasp, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonNextGrasp)
 EVT_COMMAND(id_button_CloseHand, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonCloseHand)
 EVT_CHECKBOX(id_checkbox_showcollmesh, manipulationTab::onCheckShowCollMesh)
 END_EVENT_TABLE() 
@@ -109,7 +111,8 @@ GRIPTab(parent, id, pos, size, style) {
                                   ), 0, wxEXPAND);
     // Grasping
     ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Plan Grasping")), 0, wxALL, 1);
-    checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Markers"));
+    ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next grasp")), 0, wxALL, 1);
+    checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Target Pose"));
     ss2BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
    
     ss2BoxS->Add(new wxButton(this, id_button_OpenHand, wxT("Open Hand")), 0, wxEXPAND, 1);
@@ -200,6 +203,18 @@ void manipulationTab::onButtonDoGrasping(wxCommandEvent& evt){
     grasp();
 }
 
+
+/// Show next grasp pose
+void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
+    if(!mWorld || mRobot == NULL){
+        cout << "No world loaded or world does not contain a robot" << endl;
+        return;
+    }
+	shownGraspIndex++;
+	cout << "Index: " << shownGraspIndex << "\n";
+	viewer->DrawGLScene();
+}
+
 /// Close robot's end effector
 void manipulationTab::onButtonOpenHand(wxCommandEvent& evt) {
     if (grasper != NULL && eeName.size()) {
@@ -268,9 +283,12 @@ void manipulationTab::grasp() {
     std::vector<int> mTotalDofs;
     grasper->tryToPlan(path, mTotalDofs);
     
+     return;	//todo: get ride of this
+     
     // CHECK
     cout << "Offline Plan Size: " << path.size() << endl;
     mRobot->update();
+
     
     // Create trajectory; no need to shorten path here
     const Eigen::VectorXd maxVelocity = 0.6 * Eigen::VectorXd::Ones(mTotalDofs.size());
@@ -347,7 +365,7 @@ void manipulationTab::GRIPEventSimulationBeforeTimestep() {
     mRobot->setInternalForces(positionTorques);
     
     //check object position and replan only if it hasnt been done already to save computing power
-    if (!mAlreadyReplan) {
+    if (!mAlreadyReplan && 0) {
         grasper->findClosestGraspingPoint(currentGraspPoint, selectedNode);
         Vector3d diff = currentGraspPoint - grasper->getGraspingPoint();
         
@@ -390,21 +408,42 @@ void manipulationTab::GRIPStateChange() {
 
 /// Render grasp' markers such as grasping point
 void manipulationTab::GRIPEventRender() {
+
+
     //draw graspPoint resulting from offline grasp planning
     if(checkShowCollMesh->IsChecked() && mWorld && grasper){        
         //draw RED axes on graspPoint originally calculated
-        drawAxes(grasper->getGraspingPoint(), 0.08, make_tuple(1.0, 0.0, 0.0));
+        //drawAxes(grasper->getGraspingPoint(), 0.08, make_tuple(1.0, 0.0, 0.0));
         
         //draw BLUE axes on virtual GCP in robot's end-effector
         drawAxes(grasper->getGCPXYZ(), 0.08, make_tuple(0.0, 0.0, 1.0));
     }
+    /*
     //draw current graspPoint during simulation; note point is updated until 
     //a new plan is made to save comp. power
     if(checkShowCollMesh->IsChecked() && mWorld && currentGraspPoint.sum() > 0.1){
         //draw GREEN axes on current graspPoint
         drawAxes(currentGraspPoint, 0.08, make_tuple(0.0, 1.0, 0.0));
     }
-    glFlush();
+    
+    */
+    if(checkShowCollMesh->IsChecked() && grasper && mWorld)
+    {
+    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGCPTransforms();
+    	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
+    	if(proposedGraspPoints.size()>0)
+    	{
+    		//cout << "Drawing location\n";
+    		int graspNum = shownGraspIndex % proposedGraspPoints.size();
+    //		cout << "total index: " << shownGraspIndex << "\n";
+    		Matrix4d aGrasp = proposedGraspPoints.at(graspNum);
+    //		cout << "showing grasp pose " << graspNum << ", num grasps: " << proposedGrasps.size() << "\n";
+    		cout << proposedGraspPoses.at(graspNum);
+    		mRobot->setConfig(mArmDofs, proposedGraspPoses.at(graspNum));
+    		drawAxesWithOrientation(aGrasp, .1, make_tuple(0,1,0));
+    	}
+    	glFlush();
+    }
 }
 
 /// Method to draw XYZ axes

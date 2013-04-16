@@ -371,6 +371,15 @@ namespace planning {
         return trans;
     }
     
+    vector<Eigen::Matrix4d> Grasper::getTargetGCPTransforms(){
+    	return targetTransforms;
+    }
+    
+    vector<Eigen::VectorXd> Grasper::getTargetGraspPoses(){
+    	return targetPoses;
+    
+    }
+    
     /// Set start config for grasper planner
     void Grasper::setStartConfig(Eigen::VectorXd start){
         startConfig = start;
@@ -407,12 +416,18 @@ namespace planning {
     
     int Grasper::tryToPlan(list<VectorXd> &path, vector<int> &totalDofs)
     {
-    	loadGrasps();
+    	cout << "Try to plan...\n";
+    	if(!loadGrasps())
+    		return 0;
+    	
+    	cout << "loaded grasps. proceeding to test each one:\n";
+    	
     	for(int i = 0; i < objectGrasps.size(); i++)
     	{
+    		cout << "trying grasp # " << i << "\n";
     		int result = tryGrasp(&objectGrasps.at(i), path, totalDofs);
-    		if(result)
-    			return 1;
+    	//	if(result)
+    	//		return 1;
     	}
     	return 0;
     }
@@ -420,13 +435,17 @@ namespace planning {
     /// Attempt a grasp at a target object
     int Grasper::tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs) {
 		path.clear();
+		totalDofs.clear();
+		
+	//	cout << "this grasp: x " << grasp->xCoord << ", y " << grasp->yCoord << ", r0 " << grasp->r0 << ", thumb0 " << grasp->thumb0 << "\n";
+		
 		//start with gcp offset:
 		//offset grasping point by virtual grasp center point (GCP) in robot's end effector
         Eigen::Matrix4d effTrans = robot->getNode(EEName.c_str())->getLocalInvTransform();
         VectorXd prod(4); prod << gcpVirtualLoc, 1;
         prod = effTrans * prod;
         //VectorXd gcpOff(6); gcpOff << prod(0), prod(1), prod(2),0,0,0;
-        Eigen::Matrix4d gcpOff = Eigen::Matrix4d::Zero();
+        Eigen::Matrix4d gcpOff = Eigen::Matrix4d::Identity();
         gcpOff.col(3) = prod;
 		
 		//get transformation matrix for pose of hand relative to object
@@ -442,7 +461,9 @@ namespace planning {
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
-		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf * gcpOff;
+		Eigen::Matrix4d globalGraspPose =  gcpOff * globalObjectTransf * relTransf;
+		
+		targetTransforms.push_back(globalGraspPose);
 		
 		Eigen::Matrix3d rotationM = globalGraspPose.topLeftCorner(3,3);
 		Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
@@ -451,9 +472,24 @@ namespace planning {
         
         //perform translation Jacobian towards grasping point computed
         VectorXd goalPose(6);
-        if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
-        	return 0;
         
+        cout << "\nGlobal transformation of object\n" << globalObjectTransf;
+		cout << "\n\nRotation mat of rel transfrom\n" << rotMat;
+        cout << "\n\nRelative Transformation Hand to Object:\n" << relTransf;
+
+        cout << "\n\nGCP offset:\n" << gcpOff;
+        
+        cout << "\n\nPose:\n" << globalGraspPose;
+        cout <<	"\n\neuler angles:\n" << rotation;
+                
+        if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
+        {
+        	targetPoses.push_back(goalPose);
+        	cout << "\nNo path found\n";
+        	return 0;
+        }
+        
+        targetPoses.push_back(goalPose);
         //shorten path
         shortener->shortenPath(path);
         
@@ -526,8 +562,10 @@ namespace planning {
         //todo: auto load name from object
 		float f;
 		FILE * pFile;
-
-		pFile = fopen ("grasps/gun.txt","r");
+		
+		cout << "load grasps\n";
+		
+		pFile = fopen ("grasps/drill2.txt","r");
 		int unknown;
 		
 		objectGrasps.clear();
@@ -538,12 +576,23 @@ namespace planning {
 			graspStruct newGrasp;
 			keepGoing = fscanf(pFile, "%u %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n%u %f %f %f %f %f %f %f\n", &newGrasp.numFingers, &newGrasp.thumb0, &newGrasp.thumb1, &newGrasp.thumb2, &newGrasp.point0, &newGrasp.point1, &newGrasp.point2, &newGrasp.middle0, &newGrasp.middle1, &newGrasp.middle2, &newGrasp.ring0, &newGrasp.ring1, &newGrasp.ring2, &newGrasp.pinky0, &newGrasp.pinky1, &newGrasp.pinky2, &unknown, &newGrasp.xCoord, &newGrasp.yCoord, &newGrasp.zCoord, &newGrasp.r0, &newGrasp.r1, &newGrasp.r2, &newGrasp.r3);
 			
-			if(keepGoing)
+			newGrasp.xCoord/=1000;
+			newGrasp.yCoord/=1000;
+			newGrasp.zCoord/=1000;
+			
+			if(keepGoing==24)
 			{
 				objectGrasps.push_back(newGrasp);
+				cout << "keep going: " << keepGoing << " New grasp (x, y): " << newGrasp.xCoord <<", " << newGrasp.yCoord << "\n";
+			}
+			else
+			{
+				cout << "bad one\n";
+				keepGoing = 0;
 			}
 		}
 		
 		fclose (pFile);
+		return objectGrasps.size();
 	}
 }
