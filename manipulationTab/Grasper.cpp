@@ -82,6 +82,12 @@ namespace planning {
         
         //initialize JointMover with end effector and arm's DoFs
         jm = new JointMover(*world, robot, dofs, EEName, step);
+        
+        gcpTransform = Eigen::Matrix4d::Identity();
+        //gcpTransform = robot->getNode(EEName.c_str())->getLocalInvTransform();
+        
+        //gcpTransform.topLeftCorner(3,3) = Eigen::Matrix3f(AngleAxisf(3.14159/2, Vector3f::UnitZ()) * AngleAxisf(0, Vector3f::UnitY()) * AngleAxisf(0, Vector3f::UnitZ()));
+        
     }
     
     /// Attempt a grasp at a target object
@@ -363,19 +369,34 @@ namespace planning {
         return ret;
     }
     
-    /// Return the virtual GCP transform; mainly for drawing
+    /// Return the virtual GCP transform; mainly for drawing. want this to match targetGraspTransform
     Eigen::Matrix4d Grasper::getGCPTransform(){
-        Matrix4d trans = MatrixXd::Identity(4,4);
-        trans.block(0,3,3,1) = this->getGCPXYZ();
+        Eigen::Matrix4d eefTransf = getEEFTransform();
+
+        //0.004047, 0.0128156, -0.07162959;
         
-        return trans;
+        //good enough for now
+        Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
+		
+		float palmAngle = .75;
+        Eigen::Matrix4d palmRotate; palmRotate << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
+       	return eefTransf *palmTranslate*palmRotate;
     }
     
-    vector<Eigen::Matrix4d> Grasper::getTargetGCPTransforms(){
-    	return targetTransforms;
+    Eigen::Matrix4d Grasper::getEEFTransform()
+    {
+    	return robot->getNode(EEName.c_str())->getWorldTransform();
     }
     
-    vector<Eigen::VectorXd> Grasper::getTargetGraspPoses(){
+    vector<Eigen::Matrix4d> Grasper::getTargetEEFTransforms(){		//target coordinate system for EEF
+    	return targetEEFTransforms;
+    }
+    
+    vector<Eigen::Matrix4d> Grasper::getTargetGraspTransforms(){	//relative to object in real world	
+    	return targetGraspTransforms;
+    }
+    
+    vector<Eigen::VectorXd> Grasper::getTargetGraspPoses(){		//joint angles for grasp
     	return targetPoses;
     
     }
@@ -439,6 +460,8 @@ namespace planning {
 		
 	//	cout << "this grasp: x " << grasp->xCoord << ", y " << grasp->yCoord << ", r0 " << grasp->r0 << ", thumb0 " << grasp->thumb0 << "\n";
 		
+		
+		//need to change this
 		//start with gcp offset:
 		//offset grasping point by virtual grasp center point (GCP) in robot's end effector
         Eigen::Matrix4d effTrans = robot->getNode(EEName.c_str())->getLocalInvTransform();
@@ -446,7 +469,10 @@ namespace planning {
         prod = effTrans * prod;
         //VectorXd gcpOff(6); gcpOff << prod(0), prod(1), prod(2),0,0,0;
         Eigen::Matrix4d gcpOff = Eigen::Matrix4d::Identity();
-        gcpOff.col(3) = prod;
+     //   gcpOff.col(3) = prod;
+        
+        
+        
 		
 		//get transformation matrix for pose of hand relative to object
 		Eigen::Quaterniond quatAng(grasp->r0, grasp->r1, grasp->r2, grasp->r3);
@@ -461,9 +487,9 @@ namespace planning {
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
-		Eigen::Matrix4d globalGraspPose =  gcpOff * globalObjectTransf * relTransf;
+		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf;	//gcpOff * goes in front?
 		
-		targetTransforms.push_back(globalGraspPose);
+		targetGraspTransforms.push_back(globalGraspPose);
 		
 		Eigen::Matrix3d rotationM = globalGraspPose.topLeftCorner(3,3);
 		Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
@@ -483,6 +509,7 @@ namespace planning {
         cout <<	"\n\neuler angles:\n" << rotation;
      */
                 
+        
         if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
         {
         	targetPoses.push_back(goalPose);
@@ -556,7 +583,32 @@ namespace planning {
         return 1;	//better, return quality
     }
     
-
+    
+    /*
+	void collisionCheck(int activate)
+	{
+	/
+		int fingers = robot->getNode(EEName.c_str())->getNumChildJoints();
+        vector<int> jointDirections;
+    	this->populateEndEffIds(fingers, joints, jointDirections);
+    	
+    	vector<int> collisionDofs = dofs;
+        collisionDofs.insert(collision.end(), hand_dofs.begin(), hand_dofs.end());
+        
+        for(int i = 0; i < collisionDofs.size(); i++)
+        {
+        	int index = hand_dofs.at(i);
+        	
+        }/
+        
+        const string armNodes[] = {"Body_RSP", "Body_RSR", "Body_RSY", "Body_REP", "Body_RWY", "Body_RWP"};
+        
+        for(int i = 0; i < ; i++)
+        {
+        	world->mCollisionHandle->getCollisionChecker()->deactivatePair(mRobot->getNode(armNodes[i]), ground->getNode(1));
+        }
+	}
+	*/
     
     int Grasper::loadGrasps()
     {

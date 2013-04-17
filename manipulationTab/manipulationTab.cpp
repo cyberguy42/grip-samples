@@ -213,7 +213,7 @@ void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
 
 	if(grasper)
 	{
-		vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGCPTransforms();
+		vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetEEFTransforms();
     	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
     	if(proposedGraspPoints.size()>0)
     	{
@@ -287,6 +287,8 @@ void manipulationTab::grasp() {
    
     // Setup grasper with a step = 0.02 mainly for JointMover
     grasper->init(mArmDofs, mStartConf, selectedNode, 0.02);
+    
+    
     
     // Perform grasp planning; now really it's just Jacobian translation
     std::list<Eigen::VectorXd> path;
@@ -439,8 +441,12 @@ void manipulationTab::GRIPEventRender() {
     */
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
-        drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);
-    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGCPTransforms();
+        drawAxesWithOrientation(grasper->getGCPTransform(), 0.12);
+        drawAxesWithOrientation(grasper->getEEFTransform(), 0.08);
+        cout << "\n\n GCP:\n" << grasper->getGCPTransform();
+        cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
+        
+    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGraspTransforms();
     	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
     	if(proposedGraspPoints.size()>0)
     	{
@@ -473,6 +479,7 @@ void manipulationTab::drawAxes(Eigen::VectorXd origin, double size, tuple<double
 }
 
 /// Method to draw XYZ axes with proper orientation. Collaboration with Justin Smith
+//red: x, blue: y, green: z
 void manipulationTab::drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size ) {
 
     Eigen::Matrix4d basis1up, basis1down, basis2up, basis2down;

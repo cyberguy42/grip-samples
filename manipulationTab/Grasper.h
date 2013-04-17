@@ -45,6 +45,7 @@
 
 #include <vector>
 #include <list>
+#include <math.h>
 #include <iostream>
 #include <Eigen/Core>
 #include <flann/flann.hpp>
@@ -86,7 +87,9 @@ namespace planning {
         Eigen::Vector3d getGraspingPoint();
         Eigen::Vector3d getGCPXYZ();
         Eigen::Matrix4d getGCPTransform();
-        vector<Eigen::Matrix4d> getTargetGCPTransforms();
+        Eigen::Matrix4d getEEFTransform();
+        vector<Eigen::Matrix4d> getTargetEEFTransforms();
+        vector<Eigen::Matrix4d> getTargetGraspTransforms();
         vector<Eigen::VectorXd> getTargetGraspPoses();
         void setStartConfig(Eigen::VectorXd start);
         int loadGrasps();
@@ -108,8 +111,10 @@ namespace planning {
         std::string EEName;
         Eigen::Vector3d graspPoint;
         Eigen::Vector3d gcpVirtualLoc;
-        vector<Eigen::Matrix4d> targetTransforms;
+        vector<Eigen::Matrix4d> targetEEFTransforms;
+        vector<Eigen::Matrix4d> targetGraspTransforms;
         vector<Eigen::VectorXd> targetPoses;
+        Eigen::Matrix4d gcpTransform;
         
     private:
         void populateEndEffIds(int fingers, list<kinematics::Joint*> &joints, vector<int> &jointDirections);
