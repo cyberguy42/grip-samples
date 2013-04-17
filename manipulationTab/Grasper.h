@@ -115,6 +115,8 @@ namespace planning {
         vector<Eigen::Matrix4d> targetGraspTransforms;
         vector<Eigen::VectorXd> targetPoses;
         Eigen::Matrix4d gcpTransform;
+        Eigen::Matrix4d palmTransformation;
+        Eigen::Matrix4d palmInverse;
         
     private:
         void populateEndEffIds(int fingers, list<kinematics::Joint*> &joints, vector<int> &jointDirections);

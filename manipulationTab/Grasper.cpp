@@ -84,6 +84,15 @@ namespace planning {
         jm = new JointMover(*world, robot, dofs, EEName, step);
         
         gcpTransform = Eigen::Matrix4d::Identity();
+        
+        //good enough for now
+        Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
+		
+		float palmAngle = .75;
+        Eigen::Matrix4d palmRotate; palmRotate << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
+       	palmTransformation = palmTranslate*palmRotate;
+       	palmInverse = palmTransformation.inverse();
+       	
         //gcpTransform = robot->getNode(EEName.c_str())->getLocalInvTransform();
         
         //gcpTransform.topLeftCorner(3,3) = Eigen::Matrix3f(AngleAxisf(3.14159/2, Vector3f::UnitZ()) * AngleAxisf(0, Vector3f::UnitY()) * AngleAxisf(0, Vector3f::UnitZ()));
@@ -487,7 +496,7 @@ namespace planning {
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
-		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf;	//gcpOff * goes in front?
+		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf*palmInverse;	//gcpOff * goes in front?
 		
 		targetGraspTransforms.push_back(globalGraspPose);
 		

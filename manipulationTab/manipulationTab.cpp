@@ -359,7 +359,7 @@ void manipulationTab::GRIPEventSimulationBeforeTimestep() {
 	
     Eigen::VectorXd positionTorques = mController->getTorques(mRobot->getPose(), mRobot->getQDotVector(), mWorld->mTime);
     
-
+/*
 	cout << "torques:\n" << positionTorques << "\n\n";
 	
     int closeHand = 0;
@@ -369,7 +369,7 @@ void manipulationTab::GRIPEventSimulationBeforeTimestep() {
 	}
 
 	cout << "torques after:\n" << positionTorques << "\n\n";
-	
+	*/
 
     // section here to control the fingers for force-based grasping
     // instead of position-based grasping
@@ -441,10 +441,10 @@ void manipulationTab::GRIPEventRender() {
     */
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
-        drawAxesWithOrientation(grasper->getGCPTransform(), 0.12);
+     //   drawAxesWithOrientation(grasper->getGCPTransform(), 0.12);
         drawAxesWithOrientation(grasper->getEEFTransform(), 0.08);
-        cout << "\n\n GCP:\n" << grasper->getGCPTransform();
-        cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
+   //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
+    //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
     	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGraspTransforms();
     	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
