@@ -472,7 +472,7 @@ namespace planning {
         
         //perform translation Jacobian towards grasping point computed
         VectorXd goalPose(6);
-        
+   /*     
         cout << "\nGlobal transformation of object\n" << globalObjectTransf;
 		cout << "\n\nRotation mat of rel transfrom\n" << rotMat;
         cout << "\n\nRelative Transformation Hand to Object:\n" << relTransf;
@@ -481,6 +481,7 @@ namespace planning {
         
         cout << "\n\nPose:\n" << globalGraspPose;
         cout <<	"\n\neuler angles:\n" << rotation;
+     */
                 
         if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
         {

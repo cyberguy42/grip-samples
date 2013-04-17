@@ -43,6 +43,8 @@
 #include <tuple>
 #include <Tabs/GRIPTab.h>
 #include "Grasper.h"
+#include "JTFollower.h"
+
 namespace planning { class Controller; }
 
 class manipulationTab : public GRIPTab
