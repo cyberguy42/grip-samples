@@ -210,8 +210,18 @@ void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
         cout << "No world loaded or world does not contain a robot" << endl;
         return;
     }
-	shownGraspIndex++;
-	cout << "Index: " << shownGraspIndex << "\n";
+
+	if(grasper)
+	{
+		vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGCPTransforms();
+    	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
+    	if(proposedGraspPoints.size()>0)
+    	{
+    		//cout << "Drawing location\n";
+    		shownGraspIndex = (shownGraspIndex+1) % proposedGraspPoints.size();
+    		mRobot->setConfig(mArmDofs, proposedGraspPoses.at(shownGraspIndex));
+    	}
+    }
 	viewer->DrawGLScene();
 }
 
@@ -409,16 +419,16 @@ void manipulationTab::GRIPStateChange() {
 /// Render grasp' markers such as grasping point
 void manipulationTab::GRIPEventRender() {
 
-
+	/*
     //draw graspPoint resulting from offline grasp planning
     if(checkShowCollMesh->IsChecked() && mWorld && grasper){        
         //draw RED axes on graspPoint originally calculated
         //drawAxes(grasper->getGraspingPoint(), 0.08, make_tuple(1.0, 0.0, 0.0));
         
         //draw BLUE axes on virtual GCP in robot's end-effector
-        drawAxes(grasper->getGCPXYZ(), 0.08, make_tuple(0.0, 0.0, 1.0));
+        drawAxes(grasper->getGCPXYZ(), 0.08);
     }
-    /*
+    
     //draw current graspPoint during simulation; note point is updated until 
     //a new plan is made to save comp. power
     if(checkShowCollMesh->IsChecked() && mWorld && currentGraspPoint.sum() > 0.1){
@@ -429,18 +439,17 @@ void manipulationTab::GRIPEventRender() {
     */
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
+        drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);
     	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGCPTransforms();
     	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
     	if(proposedGraspPoints.size()>0)
     	{
     		//cout << "Drawing location\n";
-    		int graspNum = shownGraspIndex % proposedGraspPoints.size();
     //		cout << "total index: " << shownGraspIndex << "\n";
-    		Matrix4d aGrasp = proposedGraspPoints.at(graspNum);
+    		Matrix4d aGrasp = proposedGraspPoints.at(shownGraspIndex);
     //		cout << "showing grasp pose " << graspNum << ", num grasps: " << proposedGrasps.size() << "\n";
-    		cout << proposedGraspPoses.at(graspNum);
-    		mRobot->setConfig(mArmDofs, proposedGraspPoses.at(graspNum));
-    		drawAxesWithOrientation(aGrasp, .1, make_tuple(0,1,0));
+    		//cout << proposedGraspPoses.at(shownGraspIndex);
+    		drawAxesWithOrientation(aGrasp, .1);
     	}
     	glFlush();
     }
@@ -460,6 +469,40 @@ void manipulationTab::drawAxes(Eigen::VectorXd origin, double size, tuple<double
     //glColor3f(0, 1, 0);
     glVertex3f(origin(0), origin(1), origin(2) - size);
     glVertex3f(origin(0), origin(1), origin(2) + size);
+    glEnd();
+}
+
+/// Method to draw XYZ axes with proper orientation. Collaboration with Justin Smith
+void manipulationTab::drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size ) {
+
+    Eigen::Matrix4d basis1up, basis1down, basis2up, basis2down;
+    basis1up << size, 0.0, 0.0, 0,
+            0.0, size, 0.0, 0,
+            0.0, 0.0, size, 0,
+            1.0, 1.0, 1.0, 1;
+
+    basis1down << -size, 0.0, 0.0, 0,
+            0.0, -size, 0.0, 0,
+            0.0, 0.0, -size, 0,
+            1.0, 1.0, 1.0, 1;
+
+    basis2up = transformation * basis1up;
+    basis2down = transformation * basis1down;
+
+
+    glBegin(GL_LINES);
+
+    glColor3f(1, 0, 0);
+    glVertex3f(basis2down(0, 0), basis2down(1, 0), basis2down(2, 0));
+    glVertex3f(basis2up(0, 0), basis2up(1, 0), basis2up(2, 0));
+
+    glColor3f(0, 0, 1);
+    glVertex3f(basis2down(0, 1), basis2down(1, 1), basis2down(2, 1));
+    glVertex3f(basis2up(0, 1), basis2up(1, 1), basis2up(2, 1));
+
+    glColor3f(0, 1, 0);
+    glVertex3f(basis2down(0, 2), basis2down(1, 2), basis2down(2, 2));
+    glVertex3f(basis2up(0, 2), basis2up(1, 2), basis2up(2, 2));
     glEnd();
 }
 
@@ -485,11 +528,11 @@ void manipulationTab::drawAxesWithOrientation(const Eigen::Matrix4d& transformat
     glVertex3f(basis2down(0, 0), basis2down(1, 0), basis2down(2, 0));
     glVertex3f(basis2up(0, 0), basis2up(1, 0), basis2up(2, 0));
 
-    //glColor3f(0, 0, 1);
+    glColor3f(0, 0, 1);
     glVertex3f(basis2down(0, 1), basis2down(1, 1), basis2down(2, 1));
     glVertex3f(basis2up(0, 1), basis2up(1, 1), basis2up(2, 1));
 
-    //glColor3f(0, 1, 0);
+    glColor3f(0, 1, 0);
     glVertex3f(basis2down(0, 2), basis2down(1, 2), basis2down(2, 2));
     glVertex3f(basis2up(0, 2), basis2up(1, 2), basis2up(2, 2));
     glEnd();
