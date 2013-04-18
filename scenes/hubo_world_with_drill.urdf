@@ -1,0 +1,20 @@
+<world name="hubo_world_with_box">
+  <!-- include the models here by referenceing their URDFs -->
+  <include filename="hubo-models/huboplus.urdf" model_name="huboplus"/>
+  <include filename="glassDiningTable2.urdf" model_name="glassDiningTable2"/>
+  <include filename="hand_drill1.urdf" model_name="hand_drill1"/>
+
+  <entity model="huboplus" name="GolemHubo">
+    <origin xyz="0 0 0.988" rpy="0 0 0"/>
+  </entity>
+
+  <entity model="glassDiningTable2" name="glassDiningTable2">
+    <origin xyz="0.40 -0.13 0.45" rpy="1.57 0.0 0.0"/>
+  </entity>
+
+  <entity model="hand_drill1" name="hand_drill1">
+    <origin xyz="0.40 -0.1 .79" rpy="0.0 0.0 -179.0"/>
+  </entity>
+
+
+</world>
