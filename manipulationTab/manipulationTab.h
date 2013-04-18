@@ -68,6 +68,7 @@ public:
   void onButtonSetPredefStart(wxCommandEvent &evt);
   void onButtonShowStart(wxCommandEvent &evt);
   void onButtonDoGrasping(wxCommandEvent &evt);
+  void onButtonFindGrasps(wxCommandEvent &evt);
   void onButtonOpenHand(wxCommandEvent &evt);
   void onButtonCloseHand(wxCommandEvent &evt);
   void onCheckShowCollMesh(wxCommandEvent &evt);
@@ -78,6 +79,7 @@ public:
   void drawAxes(Eigen::VectorXd origin, double size, tuple<double,double,double> color);
   void drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size, tuple<double,double,double> color);
   void drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size);
+  void calculateGrasps();
   
   planning::Controller* mController;
   planning::Grasper* grasper;

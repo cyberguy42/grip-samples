@@ -89,12 +89,14 @@ namespace planning {
         Eigen::Matrix4d getGCPTransform();
         Eigen::Matrix4d getEEFTransform();
         vector<Eigen::Matrix4d> getTargetEEFTransforms();
-        vector<Eigen::Matrix4d> getTargetGraspTransforms();
-        vector<Eigen::VectorXd> getTargetGraspPoses();
+        vector<Eigen::Matrix4d> getTargetPalmTransforms();
+        vector<Eigen::Matrix4d> getLocalGraspTransforms();
+        vector<Eigen::VectorXd> getGraspJointPoses();
         void setStartConfig(Eigen::VectorXd start);
         int loadGrasps();
-        int tryToPlan(std::list<Eigen::VectorXd> &path, std::vector<int> &totaldofs);
+        int tryToPlan();
         int tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs);
+        int getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs);
         
     protected:
         robotics::World* world;
@@ -111,9 +113,14 @@ namespace planning {
         std::string EEName;
         Eigen::Vector3d graspPoint;
         Eigen::Vector3d gcpVirtualLoc;
-        vector<Eigen::Matrix4d> targetEEFTransforms;
-        vector<Eigen::Matrix4d> targetGraspTransforms;
-        vector<Eigen::VectorXd> targetPoses;
+        
+        vector<Eigen::Matrix4d> targetPalmTransforms;
+        vector<Eigen::Matrix4d> targetWristTransforms;
+        vector<Eigen::Matrix4d> localGraspTransforms;
+        vector<Eigen::VectorXd> targetJointPoses;
+        vector<list<VectorXd>> allPaths;
+    	vector<vector<int>> allTotalDofs;
+    	
         Eigen::Matrix4d gcpTransform;
         Eigen::Matrix4d palmTransformation;
         Eigen::Matrix4d palmInverse;

@@ -73,7 +73,8 @@ enum DynamicSimulationTabEvents {
     id_button_CloseHand,
     id_label_Inst,
     id_checkbox_showcollmesh,
-    id_button_next_grasp
+    id_button_next_grasp,
+    id_button_FindGrasps
 };
 using namespace std;
 
@@ -81,6 +82,7 @@ using namespace std;
 BEGIN_EVENT_TABLE(manipulationTab, wxPanel)
 EVT_COMMAND(id_button_SetPredefStart, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonSetPredefStart)
 EVT_COMMAND(id_button_SetStart, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonSetStart)
+EVT_COMMAND(id_button_FindGrasps, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonFindGrasps)
 EVT_COMMAND(id_button_ShowStart, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonShowStart)
 EVT_COMMAND(id_button_Grasping, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonDoGrasping)
 EVT_COMMAND(id_button_OpenHand, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonOpenHand)
@@ -110,8 +112,9 @@ GRIPTab(parent, id, pos, size, style) {
     ss1BoxS->Add(new wxStaticText(this, id_label_Inst, wxT("Instructions:\n[1]Set start conf  [2]Select an object  [3]Click Plan Grasping")
                                   ), 0, wxEXPAND);
     // Grasping
-    ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Plan Grasping")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
     ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next grasp")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_FindGrasps, wxT("Calculate Grasps")), 0, wxALL, 1);
     checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Target Pose"));
     ss2BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
    
@@ -213,14 +216,19 @@ void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
 
 	if(grasper)
 	{
+		
 		vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetEEFTransforms();
-    	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
+    	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getGraspJointPoses();
+    	cout << "number grasps: " << proposedGraspPoints.size();
+
+    	
     	if(proposedGraspPoints.size()>0)
     	{
     		//cout << "Drawing location\n";
     		shownGraspIndex = (shownGraspIndex+1) % proposedGraspPoints.size();
     		mRobot->setConfig(mArmDofs, proposedGraspPoses.at(shownGraspIndex));
     	}
+    	  cout << "\nshownGraspIndex: " << shownGraspIndex;
     }
 	viewer->DrawGLScene();
 }
@@ -235,6 +243,10 @@ void manipulationTab::onButtonOpenHand(wxCommandEvent& evt) {
     }
 }
 
+void manipulationTab::onButtonFindGrasps(wxCommandEvent& evt) {
+	calculateGrasps();
+}
+
 /// Open robot's end effector
 void manipulationTab::onButtonCloseHand(wxCommandEvent& evt) {
     if (grasper != NULL && eeName.size()) {
@@ -245,16 +257,36 @@ void manipulationTab::onButtonCloseHand(wxCommandEvent& evt) {
     }
 }
 
+void manipulationTab::calculateGrasps()
+{
+     grasper = new planning::Grasper(mWorld, mRobot, eeName);
+     grasper->init(mArmDofs, mStartConf, selectedNode, 0.02);
+
+
+    
+    // Perform grasp planning; now really it's just Jacobian translation
+    int graspsFound = grasper->tryToPlan();
+    
+     
+}     
+
+
 /// Set initial dynamic parameters and call grasp planner and controller
 void manipulationTab::grasp() {
+    
+    if(grasper == NULL)
+    {
+    	cout << "Error: must calculate grasps first\n";
+    	return;
+    }
     
     if(selectedNode == NULL || mStartConf.size() == 0){ECHO("\tERROR: Must select an object to grasp first!!"); return;}
     // Perform memory management to allow for continuous grasping tests
     if(mController != NULL){
         delete mController;
-        delete grasper;
+       // delete grasper;
         //re-init grasper
-        grasper = new planning::Grasper(mWorld, mRobot, eeName);
+
     } 
     // Store the actuated joints (all except the first 6 which are only a convenience to locate the robot in the world)
     std::vector<int> actuatedDofs(mRobot->getNumDofs() - 6);
@@ -284,18 +316,19 @@ void manipulationTab::grasp() {
     
     // Create controller
     mController = new planning::Controller(mRobot, actuatedDofs, kP, kD, ankleDofs, anklePGains, ankleDGains);
-   
-    // Setup grasper with a step = 0.02 mainly for JointMover
-    grasper->init(mArmDofs, mStartConf, selectedNode, 0.02);
     
+	list<VectorXd> path;
+	Eigen::Matrix4d targetGrasp;
+	vector<int> mTotalDofs;
+    int result = grasper->getGrasp(shownGraspIndex, path, targetGrasp, mTotalDofs);
     
-    
-    // Perform grasp planning; now really it's just Jacobian translation
-    std::list<Eigen::VectorXd> path;
-    std::vector<int> mTotalDofs;
-    grasper->tryToPlan(path, mTotalDofs);
-    
-     return;	//todo: get ride of this
+	if(result == 0)
+	{
+		//error
+		return;
+	}
+
+
      
     // CHECK
     cout << "Offline Plan Size: " << path.size() << endl;
@@ -446,8 +479,8 @@ void manipulationTab::GRIPEventRender() {
    //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
     //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
-    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetGraspTransforms();
-    	vector<Eigen::VectorXd> proposedGraspPoses = grasper->getTargetGraspPoses();
+    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetPalmTransforms();
+    	vector<Eigen::VectorXd> proposedJointPoses = grasper->getGraspJointPoses();
     	if(proposedGraspPoints.size()>0)
     	{
     		//cout << "Drawing location\n";
@@ -479,13 +512,13 @@ void manipulationTab::drawAxes(Eigen::VectorXd origin, double size, tuple<double
 }
 
 /// Method to draw XYZ axes with proper orientation. Collaboration with Justin Smith
-//red: x, blue: y, green: z
+//red: x, blue: y, green: z		long: positive, short: negative
 void manipulationTab::drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size ) {
 
     Eigen::Matrix4d basis1up, basis1down, basis2up, basis2down;
-    basis1up << size, 0.0, 0.0, 0,
-            0.0, size, 0.0, 0,
-            0.0, 0.0, size, 0,
+    basis1up << size/2, 0.0, 0.0, 0,
+            0.0, size/2, 0.0, 0,
+            0.0, 0.0, size/2, 0,
             1.0, 1.0, 1.0, 1;
 
     basis1down << -size, 0.0, 0.0, 0,

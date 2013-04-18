@@ -89,8 +89,8 @@ namespace planning {
         Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
 		
 		float palmAngle = .75;
-        Eigen::Matrix4d palmRotate; palmRotate << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
-       	palmTransformation = palmTranslate*palmRotate;
+        Eigen::Matrix4d palmTilt; palmTilt << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
+       	palmTransformation = palmTranslate*palmTilt;
        	palmInverse = palmTransformation.inverse();
        	
         //gcpTransform = robot->getNode(EEName.c_str())->getLocalInvTransform();
@@ -398,15 +398,19 @@ namespace planning {
     }
     
     vector<Eigen::Matrix4d> Grasper::getTargetEEFTransforms(){		//target coordinate system for EEF
-    	return targetEEFTransforms;
+    	return targetWristTransforms;
     }
     
-    vector<Eigen::Matrix4d> Grasper::getTargetGraspTransforms(){	//relative to object in real world	
-    	return targetGraspTransforms;
+    vector<Eigen::Matrix4d> Grasper::getTargetPalmTransforms(){	//relative to object in real world	
+    	return targetPalmTransforms;
     }
     
-    vector<Eigen::VectorXd> Grasper::getTargetGraspPoses(){		//joint angles for grasp
-    	return targetPoses;
+    vector<Eigen::Matrix4d> Grasper::getLocalGraspTransforms(){	//relative to object in real world	
+    	return localGraspTransforms;
+    }
+    
+    vector<Eigen::VectorXd> Grasper::getGraspJointPoses(){		//joint angles for grasp
+    	return targetJointPoses;
     
     }
     
@@ -444,7 +448,7 @@ namespace planning {
     }
     
     
-    int Grasper::tryToPlan(list<VectorXd> &path, vector<int> &totalDofs)
+    int Grasper::tryToPlan()
     {
     	cout << "Try to plan...\n";
     	if(!loadGrasps())
@@ -452,20 +456,43 @@ namespace planning {
     	
     	cout << "loaded grasps. proceeding to test each one:\n";
     	
+    	int result = 0;
     	for(int i = 0; i < objectGrasps.size(); i++)
     	{
     		cout << "trying grasp # " << i << "\n";
-    		int result = tryGrasp(&objectGrasps.at(i), path, totalDofs);
-    	//	if(result)
-    	//		return 1;
+    		list<VectorXd> apath;
+    		vector<int> atotalDofs;
+    		
+    		result += tryGrasp(&objectGrasps.at(i), apath, atotalDofs);
+    		allPaths.push_back(apath);
+    		allTotalDofs.push_back(atotalDofs);
+    
     	}
-    	return 0;
+    	
+    
+    	return result;
     }
+    
+    int Grasper::getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs)
+    {
+    	if(objectGrasps.size()>0)
+    	{
+    		path = allPaths[graspNum];
+    		dofs = allTotalDofs[graspNum];
+    		targetGrasp = targetPalmTransforms[graspNum];
+    		return 1;
+    	}
+    	else
+    	{
+    		return 0;
+    	}
+    }
+    		
     
     /// Attempt a grasp at a target object
     int Grasper::tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs) {
-		path.clear();
-		totalDofs.clear();
+	//	path.clear();
+	//	totalDofs.clear();
 		
 	//	cout << "this grasp: x " << grasp->xCoord << ", y " << grasp->yCoord << ", r0 " << grasp->r0 << ", thumb0 " << grasp->thumb0 << "\n";
 		
@@ -493,12 +520,15 @@ namespace planning {
 		relTransf(1,3) = grasp->yCoord;
 		relTransf(2,3) = grasp->zCoord;
 		
+		localGraspTransforms.push_back(relTransf);
+		
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
 		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf*palmInverse;	//gcpOff * goes in front?
 		
-		targetGraspTransforms.push_back(globalGraspPose);
+		targetPalmTransforms.push_back(globalObjectTransf * relTransf);
+		targetWristTransforms.push_back(globalGraspPose);
 		
 		Eigen::Matrix3d rotationM = globalGraspPose.topLeftCorner(3,3);
 		Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
@@ -507,26 +537,21 @@ namespace planning {
         
         //perform translation Jacobian towards grasping point computed
         VectorXd goalPose(6);
-   /*     
+        
         cout << "\nGlobal transformation of object\n" << globalObjectTransf;
-		cout << "\n\nRotation mat of rel transfrom\n" << rotMat;
         cout << "\n\nRelative Transformation Hand to Object:\n" << relTransf;
-
-        cout << "\n\nGCP offset:\n" << gcpOff;
         
         cout << "\n\nPose:\n" << globalGraspPose;
-        cout <<	"\n\neuler angles:\n" << rotation;
-     */
                 
         
         if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
         {
-        	targetPoses.push_back(goalPose);
+        	targetJointPoses.push_back(goalPose);
         	cout << "\nNo path found\n";
         	return 0;
         }
         
-        targetPoses.push_back(goalPose);
+        targetJointPoses.push_back(goalPose);
         //shorten path
         shortener->shortenPath(path);
         

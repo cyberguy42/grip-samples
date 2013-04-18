@@ -66,63 +66,61 @@ JointMover::JointMover( robotics::World &_world, robotics::Robot* robot, const s
   : mConfigStep(_configStep), mWorld(_world), mRobot(robot) {
 
   mLinks = _links;
-  mMaxIter = 100;
+  mMaxIter = 200;
   mWorkspaceThresh = 0.1;	//was .02
   mEENode = (dynamics::BodyNodeDynamics*)mRobot->getNode(_EEName.c_str());
 }
 
 // Method returns either a translational Jacobian, or a full trans+rot Jacobian
-MatrixXd JointMover::GetPseudoInvJac(bool both) {
+MatrixXd JointMover::GetPseudoInvJac() {
   MatrixXd Jaclin = mEENode->getJacobianLinear().topRightCorner( 3, mLinks.size());
-  MatrixXd Jac;
+
   // handle both translations and rotations
-  if(both) {
-      MatrixXd Jacang = mEENode->getJacobianAngular().topRightCorner(3, mLinks.size());
-      Jac.resize(Jaclin.rows() + Jacang.rows(), Jaclin.cols());
-      Jac << Jaclin, Jacang;
-  }// otherwise, just handle translations
-  else {
-      Jac = Jaclin;
-  }
+  MatrixXd Jacang = mEENode->getJacobianAngular().topRightCorner(3, mLinks.size());
+  MatrixXd Jac(Jaclin.rows() + Jacang.rows(), Jaclin.cols());
+  Jac << Jaclin, Jacang;
+  std::cout<< "Jaclin: \n"<<Jaclin << "\nJacang: \n" << Jacang << std::endl;
+  
   MatrixXd JacT = Jac.transpose();
   MatrixXd JJt = (Jac*JacT);
   FullPivLU<MatrixXd> lu(JJt);
-  
-  return JacT*(lu.inverse());
+  MatrixXd Jt = JacT*( lu.inverse() );
+   
+  std::cout<< "Jaclin pseudo inverse: \n"<<Jt << std::endl;  
+  return Jt;
 }
 
-// Method performs a step towards target; such target could  
-// be a 3D vector (X,Y,Z) or a 6D vector (X,Y,Z,R,P,Y)
-VectorXd JointMover::OneStepTowardsXYZRPY( VectorXd _q, VectorXd _targetXYZRPY) {
-  assert(_targetXYZRPY.size() >= 3);
-  assert(_q.size() > 3);
-  bool both = (_targetXYZRPY.size() == 6);
-  //GetXYZ also updates the config to _q, so Jaclin use an updated value
-  VectorXd delta = _targetXYZRPY - GetXYZRPY(_q, both); 
-  //if target also specifies roll, pitch and yaw compute entire Jacobian; otherwise, just translational Jacobian
-  VectorXd dConfig = GetPseudoInvJac(both)*delta;
-  
-  // Constant to not let vector to be larger than mConfigStep
-  double alpha = min((mConfigStep/dConfig.norm()), 1.0);
-  dConfig = alpha*dConfig;
-  return _q + dConfig;
-}
 
 // Method performs a Jacobian towards specified target; such target could  
 // be a 3D vector (X,Y,Z) or a 6D vector (X,Y,Z,R,P,Y)
 bool JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd &_qResult, std::list<Eigen::VectorXd> &path) {
   _qResult = _qStart;
   mRobot->update();
-  bool both = (_targetXYZRPY.size() == 6);
+
   // GetXYZ also updates the config to _qResult, so Jaclin use an updated value
-  VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult, both); 
+  VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult); 
+  
+  cout << "Mconfigstep: " << mConfigStep << "\n";
   
   int iter = 0;
   while( delta.norm() > mWorkspaceThresh && iter < mMaxIter ) {
-    _qResult = OneStepTowardsXYZRPY(_qResult, _targetXYZRPY);
+	
+	VectorXd dConfig = GetPseudoInvJac()*delta;
+  	
+  	double n = dConfig.norm();
+  	cout << "Iter: " << iter << ", dConfig: " << n << "\n";
+  	
+  	if( n > mConfigStep ) {
+      
+      dConfig = dConfig *(mConfigStep/n);
+      printf("New dConfig : %.3f \n", n );
+    }
+    _qResult = _qResult + dConfig;
+    
     path.push_back(_qResult);
     mRobot->update();
-    delta = (_targetXYZRPY - GetXYZRPY(_qResult, both) );
+    delta = (_targetXYZRPY - GetXYZRPY(_qResult) );
+    cout << "Delta:\n" << delta << "\n\n";
     //PRINT(delta.norm());
     iter++;
   }
@@ -130,27 +128,20 @@ bool JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd 
   return iter < mMaxIter;
 }
 
-// Method to compute location of given a vector of joint configurations; note the
-// returned vector could be 3D (X,Y,Z) or 6D(X,Y,Z,R,P,Y)
-VectorXd JointMover::GetXYZRPY( VectorXd _q, bool both ) {
+// Method to compute location of given a vector of joint configurations: 6D(X,Y,Z,R,P,Y)
+VectorXd JointMover::GetXYZRPY( VectorXd _q) {
   // Get current XYZ position
   mRobot->setConfig(mLinks, _q);
   mRobot->update();
   
   MatrixXd qTransform = mEENode->getWorldTransform();
-  VectorXd qXYZRPY;
+  VectorXd qXYZRPY(6);
   
   //return a 6D vector if both x,y,z and r,p,y must be computed
-  if(both){
       Matrix3d rotM = qTransform.topLeftCorner(3,3);
       VectorXd rot = rotM.eulerAngles(0,1,2);
-      qXYZRPY.resize(6); 
       qXYZRPY << qTransform(0,3), qTransform(1,3), qTransform(2,3), rot(0), rot(1), rot(2);
-  }
-  else{
-      qXYZRPY.resize(3); 
-      qXYZRPY << qTransform(0,3), qTransform(1,3), qTransform(2,3);
-  }
+
   return qXYZRPY;
 }
 
