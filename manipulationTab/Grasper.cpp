@@ -89,8 +89,14 @@ namespace planning {
         Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
 		
 		float palmAngle = .75;
-        Eigen::Matrix4d palmTilt; palmTilt << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
-       	palmTransformation = palmTranslate*palmTilt;
+        Eigen::Matrix4d palmTilt; palmTilt << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;     
+       	
+       	Eigen::Matrix4d palmRotate; 
+       	palmRotate << 	-1, 0, 0, 0, 
+       					0, -1, 0, 0, 
+       					0, 0,  1, 0, 
+       					0, 0,  0, 1;
+       	palmTransformation = palmTranslate*palmTilt;// * palmRotate;
        	palmInverse = palmTransformation.inverse();
        	
         //gcpTransform = robot->getNode(EEName.c_str())->getLocalInvTransform();
@@ -381,15 +387,8 @@ namespace planning {
     /// Return the virtual GCP transform; mainly for drawing. want this to match targetGraspTransform
     Eigen::Matrix4d Grasper::getGCPTransform(){
         Eigen::Matrix4d eefTransf = getEEFTransform();
-
-        //0.004047, 0.0128156, -0.07162959;
         
-        //good enough for now
-        Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
-		
-		float palmAngle = .75;
-        Eigen::Matrix4d palmRotate; palmRotate << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;        
-       	return eefTransf *palmTranslate*palmRotate;
+       	return eefTransf *palmTransformation;
     }
     
     Eigen::Matrix4d Grasper::getEEFTransform()
@@ -475,17 +474,17 @@ namespace planning {
     
     int Grasper::getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs)
     {
-    	if(objectGrasps.size()>0)
-    	{
+    //	if(objectGrasps.size()>0)
+    //	{
     		path = allPaths[graspNum];
     		dofs = allTotalDofs[graspNum];
     		targetGrasp = targetPalmTransforms[graspNum];
     		return 1;
-    	}
-    	else
-    	{
-    		return 0;
-    	}
+    //	}
+    //	else
+    //	{
+    //		return 0;
+    //	}
     }
     		
     
@@ -520,12 +519,15 @@ namespace planning {
 		relTransf(1,3) = grasp->yCoord;
 		relTransf(2,3) = grasp->zCoord;
 		
+		
+		
+		
 		localGraspTransforms.push_back(relTransf);
 		
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
-		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf*palmInverse;	//gcpOff * goes in front?
+		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf*palmInverse;	//proper order, somehow
 		
 		targetPalmTransforms.push_back(globalObjectTransf * relTransf);
 		targetWristTransforms.push_back(globalGraspPose);
@@ -552,6 +554,8 @@ namespace planning {
         }
         
         targetJointPoses.push_back(goalPose);
+        
+        return 1;
         //shorten path
         shortener->shortenPath(path);
         
@@ -643,6 +647,17 @@ namespace planning {
         }
 	}
 	*/
+	
+	Eigen::VectorXd Grasper::getOrientationVector(Eigen::Matrix4d transformation)
+	{
+		Eigen::Matrix3d rotM= transformation.topLeftCorner(3,3);
+		Eigen::VectorXd rotation = rotM.eulerAngles(0,1,2);
+
+		Eigen::VectorXd orientation(6); 
+		orientation << transformation(0,3), transformation(1,3), transformation(2,3), rotation(0), rotation(1), rotation(2);
+		
+		return orientation;
+	}
     
     int Grasper::loadGrasps()
     {
@@ -652,7 +667,12 @@ namespace planning {
 		
 		cout << "load grasps\n";
 		
-		pFile = fopen ("grasps/drill2.txt","r");
+		pFile = fopen ("grasps/drillauto.txt","r");
+		if(pFile==NULL)
+		{
+			cout << "\nerror, invalid file\n";
+			return 0;
+		}
 		int unknown;
 		
 		objectGrasps.clear();

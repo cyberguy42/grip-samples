@@ -227,6 +227,7 @@ void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
     		//cout << "Drawing location\n";
     		shownGraspIndex = (shownGraspIndex+1) % proposedGraspPoints.size();
     		mRobot->setConfig(mArmDofs, proposedGraspPoses.at(shownGraspIndex));
+    		mRobot->update();	//? is this needed?)
     	}
     	  cout << "\nshownGraspIndex: " << shownGraspIndex;
     }
@@ -328,7 +329,7 @@ void manipulationTab::grasp() {
 		return;
 	}
 
-
+	cout << "Target Grasp: \n" << targetGrasp;
      
     // CHECK
     cout << "Offline Plan Size: " << path.size() << endl;
@@ -454,42 +455,34 @@ void manipulationTab::GRIPStateChange() {
 /// Render grasp' markers such as grasping point
 void manipulationTab::GRIPEventRender() {
 
-	/*
-    //draw graspPoint resulting from offline grasp planning
-    if(checkShowCollMesh->IsChecked() && mWorld && grasper){        
-        //draw RED axes on graspPoint originally calculated
-        //drawAxes(grasper->getGraspingPoint(), 0.08, make_tuple(1.0, 0.0, 0.0));
-        
-        //draw BLUE axes on virtual GCP in robot's end-effector
-        drawAxes(grasper->getGCPXYZ(), 0.08);
-    }
-    
-    //draw current graspPoint during simulation; note point is updated until 
-    //a new plan is made to save comp. power
-    if(checkShowCollMesh->IsChecked() && mWorld && currentGraspPoint.sum() > 0.1){
-        //draw GREEN axes on current graspPoint
-        drawAxes(currentGraspPoint, 0.08, make_tuple(0.0, 1.0, 0.0));
-    }
-    
-    */
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
-     //   drawAxesWithOrientation(grasper->getGCPTransform(), 0.12);
-        drawAxesWithOrientation(grasper->getEEFTransform(), 0.08);
+     //   drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);	//where actual GCP is
+        drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
    //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
     //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
-    	vector<Eigen::Matrix4d> proposedGraspPoints = grasper->getTargetPalmTransforms();
-    	vector<Eigen::VectorXd> proposedJointPoses = grasper->getGraspJointPoses();
-    	if(proposedGraspPoints.size()>0)
+		cout << "\nCurrent wrist location:\n" << grasper->getOrientationVector(grasper->getEEFTransform());
+
+    	if(grasper->getTargetPalmTransforms().size() > 0)
     	{
-    		//cout << "Drawing location\n";
-    //		cout << "total index: " << shownGraspIndex << "\n";
-    		Matrix4d aGrasp = proposedGraspPoints.at(shownGraspIndex);
-    //		cout << "showing grasp pose " << graspNum << ", num grasps: " << proposedGrasps.size() << "\n";
-    		//cout << proposedGraspPoses.at(shownGraspIndex);
-    		drawAxesWithOrientation(aGrasp, .1);
+    //		Matrix4d aGrasp = grasper->getTargetPalmTransforms().at(shownGraspIndex);
+
+    //		drawAxesWithOrientation(aGrasp, .06);		//desired location of gcp
+    		
+    		Matrix4d EEFTarget = grasper->getTargetEEFTransforms().at(shownGraspIndex);	//where wrist needs to be
+    		drawAxesWithOrientation(EEFTarget, .1);
+    		
+    		cout << "\nTarget wrist location: \n" << grasper->getOrientationVector(EEFTarget);
+    		
+    		
+    		Eigen::VectorXd orientationDiff(6);
+    		orientationDiff << grasper->getOrientationVector(grasper->getEEFTransform()) - grasper->getOrientationVector(EEFTarget);
+    		
+    		cout << "\nDiff: \n" << orientationDiff;
+    		cout << "\nMagnitude:\n" << orientationDiff.norm();
     	}
+    	
     	glFlush();
     }
 }

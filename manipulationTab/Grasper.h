@@ -97,6 +97,7 @@ namespace planning {
         int tryToPlan();
         int tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs);
         int getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs);
+        Eigen::VectorXd getOrientationVector(Eigen::Matrix4d transformation);
         
     protected:
         robotics::World* world;

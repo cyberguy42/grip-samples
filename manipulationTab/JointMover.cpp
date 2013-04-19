@@ -67,7 +67,7 @@ JointMover::JointMover( robotics::World &_world, robotics::Robot* robot, const s
 
   mLinks = _links;
   mMaxIter = 200;
-  mWorkspaceThresh = 0.1;	//was .02
+  mWorkspaceThresh = 0.02;	//was .02
   mEENode = (dynamics::BodyNodeDynamics*)mRobot->getNode(_EEName.c_str());
 }
 
@@ -79,14 +79,15 @@ MatrixXd JointMover::GetPseudoInvJac() {
   MatrixXd Jacang = mEENode->getJacobianAngular().topRightCorner(3, mLinks.size());
   MatrixXd Jac(Jaclin.rows() + Jacang.rows(), Jaclin.cols());
   Jac << Jaclin, Jacang;
-  std::cout<< "Jaclin: \n"<<Jaclin << "\nJacang: \n" << Jacang << std::endl;
+//  std::cout<< "\nJaclin: \n"<<Jaclin << "\nJacang: \n" << Jacang << std::endl;
+//  cout << "\ncombined: \n" << Jac;
   
   MatrixXd JacT = Jac.transpose();
   MatrixXd JJt = (Jac*JacT);
   FullPivLU<MatrixXd> lu(JJt);
   MatrixXd Jt = JacT*( lu.inverse() );
    
-  std::cout<< "Jaclin pseudo inverse: \n"<<Jt << std::endl;  
+  std::cout<< "\nJaclin pseudo inverse: \n"<<Jt << std::endl;  
   return Jt;
 }
 
@@ -100,25 +101,25 @@ bool JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd 
   // GetXYZ also updates the config to _qResult, so Jaclin use an updated value
   VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult); 
   
-  cout << "Mconfigstep: " << mConfigStep << "\n";
-  
+ // cout << "Mconfigstep: " << mConfigStep << "\n";
+  mConfigStep = .1;
   int iter = 0;
   while( delta.norm() > mWorkspaceThresh && iter < mMaxIter ) {
-	
+	//delta = .005 * delta/delta.head(3).norm();		//alternative way to limit xyz motion, same result
 	VectorXd dConfig = GetPseudoInvJac()*delta;
   	
   	double n = dConfig.norm();
-  	cout << "Iter: " << iter << ", dConfig: " << n << "\n";
+  	cout << "Iter: " << iter << ", dConfig norm: " << n << "\n";
   	
   	if( n > mConfigStep ) {
       
       dConfig = dConfig *(mConfigStep/n);
-      printf("New dConfig : %.3f \n", n );
+      cout << "mconfigstep: " << mConfigStep << ", new dConfig (other too big): \n" << dConfig << "\n";
     }
     _qResult = _qResult + dConfig;
     
     path.push_back(_qResult);
-    mRobot->update();
+    //mRobot->update();
     delta = (_targetXYZRPY - GetXYZRPY(_qResult) );
     cout << "Delta:\n" << delta << "\n\n";
     //PRINT(delta.norm());
