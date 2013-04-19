@@ -78,7 +78,7 @@ class JointMover {
         double _configStep);
     MatrixXd GetPseudoInvJac();
     
-    bool GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZ, VectorXd &_qResult, std::list<Eigen::VectorXd> &path );
+    double GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZ, VectorXd &_qResult, std::list<Eigen::VectorXd> &path, double angularL );
 
     VectorXd GetXYZRPY( VectorXd _q );
     

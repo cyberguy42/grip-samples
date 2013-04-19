@@ -87,19 +87,22 @@ MatrixXd JointMover::GetPseudoInvJac() {
   FullPivLU<MatrixXd> lu(JJt);
   MatrixXd Jt = JacT*( lu.inverse() );
    
-  std::cout<< "\nJaclin pseudo inverse: \n"<<Jt << std::endl;  
+ // std::cout<< "\nJaclin pseudo inverse: \n"<<Jt << std::endl;  
   return Jt;
 }
 
 
 // Method performs a Jacobian towards specified target; such target could  
 // be a 3D vector (X,Y,Z) or a 6D vector (X,Y,Z,R,P,Y)
-bool JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd &_qResult, std::list<Eigen::VectorXd> &path) {
+double JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd &_qResult, std::list<Eigen::VectorXd> &path, double angularL) {
   _qResult = _qStart;
   mRobot->update();
 
   // GetXYZ also updates the config to _qResult, so Jaclin use an updated value
   VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult); 
+  delta.tail(3) = delta.tail(3) * angularL;
+  
+  cout << "\nangularL: " << angularL << "\n";
   
  // cout << "Mconfigstep: " << mConfigStep << "\n";
   mConfigStep = .1;
@@ -109,24 +112,29 @@ bool JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd 
 	VectorXd dConfig = GetPseudoInvJac()*delta;
   	
   	double n = dConfig.norm();
-  	cout << "Iter: " << iter << ", dConfig norm: " << n << "\n";
+  //	cout << "Iter: " << iter << ", dConfig norm: " << n << "\n";
   	
   	if( n > mConfigStep ) {
       
       dConfig = dConfig *(mConfigStep/n);
-      cout << "mconfigstep: " << mConfigStep << ", new dConfig (other too big): \n" << dConfig << "\n";
+  //    cout << "mconfigstep: " << mConfigStep << ", new dConfig (other too big): \n" << dConfig << "\n";
     }
     _qResult = _qResult + dConfig;
     
     path.push_back(_qResult);
     //mRobot->update();
     delta = (_targetXYZRPY - GetXYZRPY(_qResult) );
-    cout << "Delta:\n" << delta << "\n\n";
+    
+    cout << "\nDelta:\n" << delta << "\n\n";    
+    
+  	delta.tail(3) = delta.tail(3) * angularL;
+    
+    cout << "New Delta:\n" << delta << "\n\n";
     //PRINT(delta.norm());
     iter++;
   }
   mRobot->update();
-  return iter < mMaxIter;
+  return delta.norm();
 }
 
 // Method to compute location of given a vector of joint configurations: 6D(X,Y,Z,R,P,Y)

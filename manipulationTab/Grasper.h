@@ -95,7 +95,7 @@ namespace planning {
         void setStartConfig(Eigen::VectorXd start);
         int loadGrasps();
         int tryToPlan();
-        int tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs);
+        int tryGrasp(graspStruct* grasp);
         int getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs);
         Eigen::VectorXd getOrientationVector(Eigen::Matrix4d transformation);
         

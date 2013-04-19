@@ -112,7 +112,7 @@ namespace planning {
         
         //perform translation Jacobian towards grasping point computed
         VectorXd goalPose(6);
-        jm->GoToXYZRPY(startConfig, graspPoint, goalPose, path);
+   //     jm->GoToXYZRPY(startConfig, graspPoint, goalPose, path);
         
         //shorten path
         shortener->shortenPath(path);
@@ -159,7 +159,7 @@ namespace planning {
             VectorXd & t(*loc);
             path_back.clear();
            
-            jm->GoToXYZRPY(robot->getConfig(dofs), t, backPose, path_back);
+         //   jm->GoToXYZRPY(robot->getConfig(dofs), t, backPose, path_back);
             shortener->shortenPath(path_back);
             for(list<VectorXd>::iterator it = path_back.begin(); it != path_back.end(); it++){
                     VectorXd & v (*it);
@@ -462,9 +462,7 @@ namespace planning {
     		list<VectorXd> apath;
     		vector<int> atotalDofs;
     		
-    		result += tryGrasp(&objectGrasps.at(i), apath, atotalDofs);
-    		allPaths.push_back(apath);
-    		allTotalDofs.push_back(atotalDofs);
+    		result += tryGrasp(&objectGrasps.at(i));
     
     	}
     	
@@ -489,11 +487,14 @@ namespace planning {
     		
     
     /// Attempt a grasp at a target object
-    int Grasper::tryGrasp(graspStruct* grasp, list<VectorXd> &path, vector<int> &totalDofs) {
+    int Grasper::tryGrasp(graspStruct* grasp) {
 	//	path.clear();
 	//	totalDofs.clear();
 		
 	//	cout << "this grasp: x " << grasp->xCoord << ", y " << grasp->yCoord << ", r0 " << grasp->r0 << ", thumb0 " << grasp->thumb0 << "\n";
+		
+		vector<int> totalDofs;
+		list<VectorXd> path;
 		
 		
 		//need to change this
@@ -522,15 +523,14 @@ namespace planning {
 		
 		
 		
-		localGraspTransforms.push_back(relTransf);
+
 		
 		Eigen::Matrix4d globalObjectTransf = objectNode->getWorldTransform();
 		
 		//now transform gcp offset to relative hand to object pose to object to world.
 		Eigen::Matrix4d globalGraspPose = globalObjectTransf * relTransf*palmInverse;	//proper order, somehow
 		
-		targetPalmTransforms.push_back(globalObjectTransf * relTransf);
-		targetWristTransforms.push_back(globalGraspPose);
+
 		
 		Eigen::Matrix3d rotationM = globalGraspPose.topLeftCorner(3,3);
 		Eigen::VectorXd rotation = rotationM.eulerAngles(0,1,2);
@@ -540,20 +540,30 @@ namespace planning {
         //perform translation Jacobian towards grasping point computed
         VectorXd goalPose(6);
         
-        cout << "\nGlobal transformation of object\n" << globalObjectTransf;
-        cout << "\n\nRelative Transformation Hand to Object:\n" << relTransf;
+   //     cout << "\nGlobal transformation of object\n" << globalObjectTransf;
+   //     cout << "\n\nRelative Transformation Hand to Object:\n" << relTransf;
         
-        cout << "\n\nPose:\n" << globalGraspPose;
+   //     cout << "\n\nPose:\n" << globalGraspPose;
                 
+        double angularL =palmTransformation.block(0,3,3,1).norm();        
         
-        if(!jm->GoToXYZRPY(startConfig, graspPose, goalPose, path))
+        double distance = jm->GoToXYZRPY(startConfig, graspPose, goalPose, path, angularL);
+        
+        if(distance > .05)
         {
-        	targetJointPoses.push_back(goalPose);
-        	cout << "\nNo path found\n";
         	return 0;
         }
-        
+        //	cout << "\nNo path found\n";
+
         targetJointPoses.push_back(goalPose);
+        allPaths.push_back(path);
+    	allTotalDofs.push_back(totalDofs);
+    	
+    	
+    	targetPalmTransforms.push_back(globalObjectTransf * relTransf);
+		targetWristTransforms.push_back(globalGraspPose);
+        localGraspTransforms.push_back(relTransf);
+        
         
         return 1;
         //shorten path
@@ -601,7 +611,7 @@ namespace planning {
             VectorXd & t(*loc);
             path_back.clear();
            
-            jm->GoToXYZRPY(robot->getConfig(dofs), t, backPose, path_back);
+            jm->GoToXYZRPY(robot->getConfig(dofs), t, backPose, path_back, angularL);
             shortener->shortenPath(path_back);
             for(list<VectorXd>::iterator it = path_back.begin(); it != path_back.end(); it++){
                     VectorXd & v (*it);
