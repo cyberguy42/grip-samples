@@ -86,7 +86,7 @@ namespace planning {
         gcpTransform = Eigen::Matrix4d::Identity();
         
         //good enough for now
-        Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,0.004,0,1,0,.0128,0,0,1,-.08,0,0,0,1;
+        Eigen::Matrix4d palmTranslate; palmTranslate << 1,0,0,.016,0,1,0,-.01,0,0,1,-.075,0,0,0,1;
 		
 		float palmAngle = .75;
         Eigen::Matrix4d palmTilt; palmTilt << 1,0,0,0,0,cos(palmAngle),-sin(palmAngle),0,0,sin(palmAngle),cos(palmAngle),0,0,0,0,1;     
@@ -96,7 +96,7 @@ namespace planning {
        					0, -1, 0, 0, 
        					0, 0,  1, 0, 
        					0, 0,  0, 1;
-       	palmTransformation = palmTranslate*palmTilt;// * palmRotate;
+       	palmTransformation = palmTranslate*palmTilt*palmRotate;// for some reason, order is backwards: first the translation, then tilt, then rotate. 
        	palmInverse = palmTransformation.inverse();
        	
         //gcpTransform = robot->getNode(EEName.c_str())->getLocalInvTransform();
@@ -425,7 +425,9 @@ namespace planning {
         if(hand_dofs.size()){
             hand_dofs.clear();
             js.clear();
+            jointVec.clear();
             jointDirections.clear();
+            successfulGraspIndex.clear();
         }
         for (int i = 0; i < fingers; i++) {
             //populate list of end-effector joints
@@ -433,7 +435,11 @@ namespace planning {
             js.push_back(fingerJoint);
             js.push_back(fingerJoint->getChildNode()->getChildJoint(0));
             js.push_back(fingerJoint->getChildNode()->getChildJoint(0)->getChildNode()->getChildJoint(0));
-
+			
+			jointVec.push_back(fingerJoint);
+			jointVec.push_back(fingerJoint->getChildNode()->getChildJoint(0));
+            jointVec.push_back(fingerJoint->getChildNode()->getChildJoint(0)->getChildNode()->getChildJoint(0));
+			
             //populate list of joint directions; finger joint grows - ,while distal and medial grow +
             jointDirections.push_back(-1);
             jointDirections.push_back(1);
@@ -462,7 +468,7 @@ namespace planning {
     		list<VectorXd> apath;
     		vector<int> atotalDofs;
     		
-    		result += tryGrasp(&objectGrasps.at(i));
+    		result += tryGrasp(&objectGrasps.at(i), i);
     
     	}
     	
@@ -487,7 +493,7 @@ namespace planning {
     		
     
     /// Attempt a grasp at a target object
-    int Grasper::tryGrasp(graspStruct* grasp) {
+    int Grasper::tryGrasp(graspStruct* grasp, int graspNum) {
 	//	path.clear();
 	//	totalDofs.clear();
 		
@@ -551,10 +557,10 @@ namespace planning {
         
         if(distance > .05)
         {
+         	//	cout << "\nNot good enough\n";
         	return 0;
         }
-        //	cout << "\nNo path found\n";
-
+   
         targetJointPoses.push_back(goalPose);
         allPaths.push_back(path);
     	allTotalDofs.push_back(totalDofs);
@@ -563,7 +569,9 @@ namespace planning {
     	targetPalmTransforms.push_back(globalObjectTransf * relTransf);
 		targetWristTransforms.push_back(globalGraspPose);
         localGraspTransforms.push_back(relTransf);
+        successfulGraspIndex.push_back(graspNum);
         
+        //closeHandGraspFile(grasp);	//testing purposes- does the hand close right?
         
         return 1;
         //shorten path
@@ -571,8 +579,9 @@ namespace planning {
         
         //try to close hand;
         totalDofs = dofs;
-        closeHandPositionBased(0.1, objectNode);
- 
+        //closeHandPositionBased(0.1, objectNode);
+ 		closeHandGraspFile(grasp);
+ 		
         //merge DoFs to include hand closure configs in path
         totalDofs.insert(totalDofs.end(), hand_dofs.begin(), hand_dofs.end());
         
@@ -667,6 +676,43 @@ namespace planning {
 		orientation << transformation(0,3), transformation(1,3), transformation(2,3), rotation(0), rotation(1), rotation(2);
 		
 		return orientation;
+	}
+	
+	void Grasper::closeHandGraspNum(int graspNum)
+	{
+		int graspIndex = successfulGraspIndex.at(graspNum);
+		graspStruct* grasp = &objectGrasps.at(graspIndex);
+		closeHandGraspFile(grasp);
+	}
+	
+	void Grasper::closeHandGraspFile(graspStruct* grasp)
+	{
+	    int fingers = robot->getNode(EEName.c_str())->getNumChildJoints();
+        vector<int> jointDirections;
+        
+        //first build list of joints
+        this->populateEndEffIds(fingers, joints, jointDirections);
+               
+        jointVec.at(0)->getDof(0)->setValue(jointDirections[0] * grasp->point0 *180/3.14);
+        jointVec.at(1)->getDof(0)->setValue(jointDirections[1] * grasp->point1 *180/3.14);
+        jointVec.at(2)->getDof(0)->setValue(jointDirections[2] * grasp->point2 *180/3.14);
+        
+        jointVec.at(3)->getDof(0)->setValue(jointDirections[3] * grasp->middle0 *180/3.14);
+        jointVec.at(4)->getDof(0)->setValue(jointDirections[4] * grasp->middle1 *180/3.14);
+        jointVec.at(5)->getDof(0)->setValue(jointDirections[5] * grasp->middle2 *180/3.14);
+        
+        jointVec.at(6)->getDof(0)->setValue(jointDirections[6] * grasp->pinky0 *180/3.14);
+        jointVec.at(7)->getDof(0)->setValue(jointDirections[7] * grasp->pinky1 *180/3.14);
+        jointVec.at(8)->getDof(0)->setValue(jointDirections[8] * grasp->pinky2 *180/3.14);
+        
+        jointVec.at(9)->getDof(0)->setValue(jointDirections[9] * grasp->ring0 *180/3.14);
+        jointVec.at(10)->getDof(0)->setValue(jointDirections[10] * grasp->ring1 *180/3.14);
+        jointVec.at(11)->getDof(0)->setValue(jointDirections[11] * grasp->ring2 *180/3.14);
+        
+        jointVec.at(12)->getDof(0)->setValue(jointDirections[12] * grasp->thumb0 *180/3.14);
+        jointVec.at(13)->getDof(0)->setValue(jointDirections[13] * grasp->thumb1 *180/3.14);
+        jointVec.at(14)->getDof(0)->setValue(jointDirections[14] * grasp->thumb2 *180/3.14);
+        robot->update();
 	}
     
     int Grasper::loadGrasps()

@@ -102,7 +102,7 @@ double JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorX
   VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult); 
   delta.tail(3) = delta.tail(3) * angularL;
   
-  cout << "\nangularL: " << angularL << "\n";
+ // cout << "\nangularL: " << angularL << "\n";
   
  // cout << "Mconfigstep: " << mConfigStep << "\n";
   mConfigStep = .1;
@@ -125,11 +125,12 @@ double JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorX
     //mRobot->update();
     delta = (_targetXYZRPY - GetXYZRPY(_qResult) );
     
-    cout << "\nDelta:\n" << delta << "\n\n";    
+  //  cout << "\nDelta:\n" << delta << "\n\n";    
     
-  	delta.tail(3) = delta.tail(3) * angularL;
+    //convert angular portion into meters by multiplying by length of translation vector between wrist and grasp point. Prevents angular part form dominating and rejecting good solutions. Courtesy of Michael Grey
+  	delta.tail(3) = delta.tail(3) * angularL;		
     
-    cout << "New Delta:\n" << delta << "\n\n";
+ //   cout << "New Delta:\n" << delta << "\n\n";
     //PRINT(delta.norm());
     iter++;
   }

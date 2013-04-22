@@ -94,8 +94,10 @@ namespace planning {
         vector<Eigen::VectorXd> getGraspJointPoses();
         void setStartConfig(Eigen::VectorXd start);
         int loadGrasps();
+        void closeHandGraspFile(graspStruct* grasp);
+        void closeHandGraspNum(int graspNum);
         int tryToPlan();
-        int tryGrasp(graspStruct* grasp);
+        int tryGrasp(graspStruct* grasp, int i);
         int getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs);
         Eigen::VectorXd getOrientationVector(Eigen::Matrix4d transformation);
         
@@ -107,6 +109,7 @@ namespace planning {
         robotics::Robot* robot;
         std::vector<int> dofs;
         std::vector<int> hand_dofs;
+        std::vector<kinematics::Joint*> jointVec;
         list<kinematics::Joint*> joints;
         Eigen::VectorXd startConfig;
         Eigen::VectorXd objectConfig;
@@ -114,6 +117,7 @@ namespace planning {
         std::string EEName;
         Eigen::Vector3d graspPoint;
         Eigen::Vector3d gcpVirtualLoc;
+        vector<int> successfulGraspIndex;
         
         vector<Eigen::Matrix4d> targetPalmTransforms;
         vector<Eigen::Matrix4d> targetWristTransforms;

@@ -112,14 +112,15 @@ GRIPTab(parent, id, pos, size, style) {
     ss1BoxS->Add(new wxStaticText(this, id_label_Inst, wxT("Instructions:\n[1]Set start conf  [2]Select an object  [3]Click Plan Grasping")
                                   ), 0, wxEXPAND);
     // Grasping
-    ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
+
     ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next grasp")), 0, wxALL, 1);
     ss2BoxS->Add(new wxButton(this, id_button_FindGrasps, wxT("Calculate Grasps")), 0, wxALL, 1);
     checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Target Pose"));
     ss2BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
-   
-    ss2BoxS->Add(new wxButton(this, id_button_OpenHand, wxT("Open Hand")), 0, wxEXPAND, 1);
-    ss2BoxS->Add(new wxButton(this, id_button_CloseHand, wxT("Close Hand")), 0, wxEXPAND, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_CloseHand, wxT("Close Hand")), 0, wxALL, 1);   
+    ss2BoxS->Add(new wxButton(this, id_button_OpenHand, wxT("Open Hand")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
+
     // Add the boxes to their respective sizers
     sizerFull->Add(ss1BoxS, 1, wxEXPAND | wxALL, 6);
     sizerFull->Add(ss2BoxS, 1, wxEXPAND | wxALL, 6);
@@ -251,7 +252,8 @@ void manipulationTab::onButtonFindGrasps(wxCommandEvent& evt) {
 /// Open robot's end effector
 void manipulationTab::onButtonCloseHand(wxCommandEvent& evt) {
     if (grasper != NULL && eeName.size()) {
-        grasper->closeHandPositionBased(0.1, selectedNode);
+    	//grasper->closeHandGraspNum(shownGraspIndex);
+       grasper->closeHandPositionBased(0.1, selectedNode);
         viewer->DrawGLScene();
     } else {
         ECHO("ERROR: Must reinitialize Grasper object: Click Grasp Object!")
@@ -457,30 +459,30 @@ void manipulationTab::GRIPEventRender() {
 
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
-     //   drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);	//where actual GCP is
-        drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
+        drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);	//where actual GCP is
+    //    drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
    //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
     //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
-		cout << "\nCurrent wrist location:\n" << grasper->getOrientationVector(grasper->getEEFTransform());
+	//	cout << "\nCurrent wrist location:\n" << grasper->getOrientationVector(grasper->getEEFTransform());
 
     	if(grasper->getTargetPalmTransforms().size() > 0)
     	{
-    //		Matrix4d aGrasp = grasper->getTargetPalmTransforms().at(shownGraspIndex);
+    		Matrix4d aGrasp = grasper->getTargetPalmTransforms().at(shownGraspIndex);
 
-    //		drawAxesWithOrientation(aGrasp, .06);		//desired location of gcp
+    		drawAxesWithOrientation(aGrasp, .06);		//desired location of gcp
     		
     		Matrix4d EEFTarget = grasper->getTargetEEFTransforms().at(shownGraspIndex);	//where wrist needs to be
-    		drawAxesWithOrientation(EEFTarget, .1);
+    	//	drawAxesWithOrientation(EEFTarget, .1);
     		
-    		cout << "\nTarget wrist location: \n" << grasper->getOrientationVector(EEFTarget);
+    	//	cout << "\nTarget wrist location: \n" << grasper->getOrientationVector(EEFTarget);
     		
     		
     		Eigen::VectorXd orientationDiff(6);
     		orientationDiff << grasper->getOrientationVector(grasper->getEEFTransform()) - grasper->getOrientationVector(EEFTarget);
     		
-    		cout << "\nDiff: \n" << orientationDiff;
-    		cout << "\nMagnitude:\n" << orientationDiff.norm();
+    	//	cout << "\nDiff: \n" << orientationDiff;
+    	//	cout << "\nMagnitude:\n" << orientationDiff.norm();
     	}
     	
     	glFlush();
