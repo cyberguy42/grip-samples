@@ -464,14 +464,12 @@ namespace planning {
     	int result = 0;
     	for(int i = 0; i < objectGrasps.size(); i++)
     	{
-    		cout << "trying grasp # " << i << "\n";
-    		list<VectorXd> apath;
-    		vector<int> atotalDofs;
+    		//cout << "trying grasp # " << i << "\n";
     		
     		result += tryGrasp(&objectGrasps.at(i), i);
     
     	}
-    	
+    	cout << "done\n\n";
     
     	return result;
     }
@@ -555,21 +553,28 @@ namespace planning {
         
         double distance = jm->GoToXYZRPY(startConfig, graspPose, goalPose, path, angularL);
         
+        cout << "\npath size: " << (int)path.size() << ", distance: " << distance << "\n";
+        
         if(distance > .05)
         {
          	//	cout << "\nNot good enough\n";
         	return 0;
         }
-   
+        
+        totalDofs = dofs;
         targetJointPoses.push_back(goalPose);
         allPaths.push_back(path);
     	allTotalDofs.push_back(totalDofs);
+    	cout << "dofs: " << totalDofs.size();
+    	cout << "\n";
     	
     	
     	targetPalmTransforms.push_back(globalObjectTransf * relTransf);
 		targetWristTransforms.push_back(globalGraspPose);
         localGraspTransforms.push_back(relTransf);
         successfulGraspIndex.push_back(graspNum);
+        
+        cout << "added another path (#" << (int)targetJointPoses.size() << ")\n";
         
         //closeHandGraspFile(grasp);	//testing purposes- does the hand close right?
         

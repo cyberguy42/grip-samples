@@ -109,8 +109,10 @@ GRIPTab(parent, id, pos, size, style) {
     ss1BoxS->Add(new wxButton(this, id_button_SetPredefStart, wxT("Set Predef Start")), 0, wxALL, 1);
     ss1BoxS->Add(new wxButton(this, id_button_SetStart, wxT("Set Custom Start")), 0, wxALL, 1);
     ss1BoxS->Add(new wxButton(this, id_button_ShowStart, wxT("Show Start Conf")), 0, wxALL, 1);
-    ss1BoxS->Add(new wxStaticText(this, id_label_Inst, wxT("Instructions:\n[1]Set start conf  [2]Select an object  [3]Click Plan Grasping")
-                                  ), 0, wxEXPAND);
+    //ss1BoxS->Add(new wxStaticText(this, id_label_Inst, wxT("Instructions:\n[1]Set start conf  [2]Select an object  [3]Click Plan Grasping")), 0, wxEXPAND);
+    
+    
+    ss1BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
     // Grasping
 
     ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next grasp")), 0, wxALL, 1);
@@ -119,7 +121,7 @@ GRIPTab(parent, id, pos, size, style) {
     ss2BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
     ss2BoxS->Add(new wxButton(this, id_button_CloseHand, wxT("Close Hand")), 0, wxALL, 1);   
     ss2BoxS->Add(new wxButton(this, id_button_OpenHand, wxT("Open Hand")), 0, wxALL, 1);
-    ss2BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
+
 
     // Add the boxes to their respective sizers
     sizerFull->Add(ss1BoxS, 1, wxEXPAND | wxALL, 6);
@@ -269,7 +271,7 @@ void manipulationTab::calculateGrasps()
     
     // Perform grasp planning; now really it's just Jacobian translation
     int graspsFound = grasper->tryToPlan();
-    
+    cout << "stuff " << endl;
      
 }     
 
@@ -297,6 +299,8 @@ void manipulationTab::grasp() {
         actuatedDofs[i] = i + 6;
     }
     
+    cout << "stored joints. deactivating collisions with ground\n";
+    
     // Deactivate collision checking between the feet and the ground during planning
     dynamics::SkeletonDynamics* ground = mWorld->getSkeleton("ground");
     mWorld->mCollisionHandle->getCollisionChecker()->deactivatePair(mRobot->getNode("Body_LAR"), ground->getNode(1));
@@ -314,9 +318,12 @@ void manipulationTab::grasp() {
     const Eigen::VectorXd anklePGains = -1000.0 * Eigen::VectorXd::Ones(2);
     const Eigen::VectorXd ankleDGains = -200.0 * Eigen::VectorXd::Ones(2);
     
+    cout << "updating robot pose\n";
+    
     // Update robot's pose
     mRobot->setConfig(mArmDofs, mStartConf);
     
+    cout << "creating controller\n";
     // Create controller
     mController = new planning::Controller(mRobot, actuatedDofs, kP, kD, ankleDofs, anklePGains, ankleDGains);
     
@@ -334,13 +341,23 @@ void manipulationTab::grasp() {
 	cout << "Target Grasp: \n" << targetGrasp;
      
     // CHECK
-    cout << "Offline Plan Size: " << path.size() << endl;
+    cout << "Offline Plan Size: " << (int)path.size();
+    cout << ", mTotalDofs: ";
+    cout << mTotalDofs.size();
+    cout << endl;
     mRobot->update();
+
 
     
     // Create trajectory; no need to shorten path here
     const Eigen::VectorXd maxVelocity = 0.6 * Eigen::VectorXd::Ones(mTotalDofs.size());
     const Eigen::VectorXd maxAcceleration = 0.6 * Eigen::VectorXd::Ones(mTotalDofs.size());
+    
+    cout << "generating path following trajectory, max Velocity = ";
+    cout << maxVelocity;
+    cout << ", maxAcceleration = ";
+    cout << maxAcceleration;
+    cout  << "\n";
     planning::Trajectory* trajectory = new planning::PathFollowingTrajectory(path, maxVelocity, maxAcceleration);
     
     std::cout << "Trajectory duration: " << trajectory->getDuration() << endl;
@@ -460,7 +477,7 @@ void manipulationTab::GRIPEventRender() {
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
         drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);	//where actual GCP is
-    //    drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
+        drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
    //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
     //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
@@ -473,7 +490,7 @@ void manipulationTab::GRIPEventRender() {
     		drawAxesWithOrientation(aGrasp, .06);		//desired location of gcp
     		
     		Matrix4d EEFTarget = grasper->getTargetEEFTransforms().at(shownGraspIndex);	//where wrist needs to be
-    	//	drawAxesWithOrientation(EEFTarget, .1);
+    		drawAxesWithOrientation(EEFTarget, .1);
     		
     	//	cout << "\nTarget wrist location: \n" << grasper->getOrientationVector(EEFTarget);
     		
