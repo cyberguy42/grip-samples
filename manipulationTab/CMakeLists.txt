@@ -41,8 +41,8 @@ link_directories(${GRIP_LIBRARY_DIRS})
 
 
 # Search all header and source files
-set ( manipulationTab_src manipulationTab.cpp manipulationTabApp.cpp Controller.cpp Grasper.cpp JointMover.cpp)
-set ( manipulationTab_hdr manipulationTab.h Controller.h Grasper.h JointMover.h)
+set ( manipulationTab_src manipulationTab.cpp manipulationTabApp.cpp Controller.cpp Grasper.cpp JointMover.cpp GraspRRT.cpp JRRT.cpp)
+set ( manipulationTab_hdr manipulationTab.h Controller.h Grasper.h JointMover.h GraspRRT.h JRRT.h)
 
 if(WIN32)
   set (wxWidgets_EXCLUDE_COMMON_LIBRARIES TRUE)

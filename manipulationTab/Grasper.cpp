@@ -683,6 +683,17 @@ namespace planning {
 		return orientation;
 	}
 	
+	vector<Eigen::VectorXd> Grasper::getTargetPoses()
+	{
+		vector<Eigen::VectorXd> targetPosesVec;
+		for(int i= 0; i < targetWristTransforms.size(); i++)
+		{
+			targetPosesVec.push_back(getOrientationVector(targetWristTransforms.at(i)));
+		}
+		return targetPosesVec;
+	
+	}
+	
 	void Grasper::closeHandGraspNum(int graspNum)
 	{
 		int graspIndex = successfulGraspIndex.at(graspNum);
@@ -747,6 +758,16 @@ namespace planning {
 			newGrasp.xCoord/=1000;
 			newGrasp.yCoord/=1000;
 			newGrasp.zCoord/=1000;
+			
+			Eigen::Quaterniond quatAng(newGrasp.r0, newGrasp.r1, newGrasp.r2, newGrasp.r3);
+			Eigen::Matrix3d rotMat = Eigen::Matrix3d(quatAng);
+			Eigen::VectorXd rotAngles(3);
+			rotAngles << rotMat.eulerAngles(0,1,2);
+			
+			VectorXd newPose(6);
+			newPose << newGrasp.xCoord, newGrasp.yCoord, newGrasp.zCoord, rotAngles(0), rotAngles(1), rotAngles(2);
+			
+			newGrasp.pose = newPose;
 			
 			if(keepGoing==24)
 			{

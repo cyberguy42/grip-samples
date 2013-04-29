@@ -71,6 +71,14 @@ JointMover::JointMover( robotics::World &_world, robotics::Robot* robot, const s
   mEENode = (dynamics::BodyNodeDynamics*)mRobot->getNode(_EEName.c_str());
 }
 
+JointMover::JointMover( robotics::World &_world, robotics::Robot* robot, const std::vector<int> &_links,  std::string _EEName, double _configStep, int maxIterations, double workspaceThresh, double angleFactor)
+  : mConfigStep(_configStep), mWorld(_world), mRobot(robot) {
+  mAngularL = angleFactor;
+  mLinks = _links;
+  mMaxIter = maxIterations;
+  mWorkspaceThresh = workspaceThresh;	//was .02
+  mEENode = (dynamics::BodyNodeDynamics*)mRobot->getNode(_EEName.c_str());
+}
 // Method returns either a translational Jacobian, or a full trans+rot Jacobian
 MatrixXd JointMover::GetPseudoInvJac() {
   MatrixXd Jaclin = mEENode->getJacobianLinear().topRightCorner( 3, mLinks.size());
@@ -89,6 +97,26 @@ MatrixXd JointMover::GetPseudoInvJac() {
    
  // std::cout<< "\nJaclin pseudo inverse: \n"<<Jt << std::endl;  
   return Jt;
+}
+
+int JointMover::getStepTowardsXYZRPY(VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd &_qResult) {
+  _qResult = _qStart;
+  mRobot->update();
+
+  VectorXd delta = _targetXYZRPY - GetXYZRPY(_qResult); 
+  delta.tail(3) = delta.tail(3) * mAngularL;
+
+	VectorXd dConfig = GetPseudoInvJac()*delta;
+  	
+  	double n = dConfig.norm();
+  	
+  	if( n > mConfigStep ) {
+      
+      dConfig = dConfig *(mConfigStep/n);
+    }
+    _qResult = _qResult + dConfig;
+    
+  return delta.norm() < mWorkspaceThresh;
 }
 
 
@@ -122,7 +150,8 @@ double JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorX
     _qResult = _qResult + dConfig;
     
     path.push_back(_qResult);
-    //mRobot->update();
+    
+    //Robot configuration is updated in GetXYZRPY, so why allowing invalid?
     delta = (_targetXYZRPY - GetXYZRPY(_qResult) );
     
   //  cout << "\nDelta:\n" << delta << "\n\n";    

@@ -73,8 +73,11 @@ enum DynamicSimulationTabEvents {
     id_button_CloseHand,
     id_label_Inst,
     id_checkbox_showcollmesh,
+    id_checkbox_UseRRT,
     id_button_next_grasp,
-    id_button_FindGrasps
+    id_button_FindGrasps,
+    id_button_PlanPath,
+    id_button_ShowConfig
 };
 using namespace std;
 
@@ -88,7 +91,10 @@ EVT_COMMAND(id_button_Grasping, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::o
 EVT_COMMAND(id_button_OpenHand, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonOpenHand)
 EVT_COMMAND(id_button_next_grasp, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonNextGrasp)
 EVT_COMMAND(id_button_CloseHand, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonCloseHand)
+EVT_COMMAND(id_button_PlanPath, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonPlanPath)
+EVT_COMMAND(id_button_ShowConfig, wxEVT_COMMAND_BUTTON_CLICKED, manipulationTab::onButtonShowConfig)
 EVT_CHECKBOX(id_checkbox_showcollmesh, manipulationTab::onCheckShowCollMesh)
+EVT_CHECKBOX(id_checkbox_UseRRT, manipulationTab::onCheckUseRRT)
 END_EVENT_TABLE() 
 IMPLEMENT_DYNAMIC_CLASS(manipulationTab, GRIPTab)
 
@@ -100,11 +106,13 @@ GRIPTab(parent, id, pos, size, style) {
     // Create Static boxes (outline of your Tab)
     wxStaticBox* ss1Box = new wxStaticBox(this, -1, wxT("Setup"));
     wxStaticBox* ss2Box = new wxStaticBox(this, -1, wxT("Manipulation"));
+    wxStaticBox* ss3Box = new wxStaticBox(this, -1, wxT("Plan"));
     
     // Create sizers for these static boxes
     wxStaticBoxSizer* ss1BoxS = new wxStaticBoxSizer(ss1Box, wxVERTICAL);
     wxStaticBoxSizer* ss2BoxS = new wxStaticBoxSizer(ss2Box, wxVERTICAL);
-    
+    wxStaticBoxSizer* ss3BoxS = new wxStaticBoxSizer(ss3Box, wxVERTICAL);  
+      
     // Start and goal conf button
     ss1BoxS->Add(new wxButton(this, id_button_SetPredefStart, wxT("Set Predef Start")), 0, wxALL, 1);
     ss1BoxS->Add(new wxButton(this, id_button_SetStart, wxT("Set Custom Start")), 0, wxALL, 1);
@@ -115,17 +123,22 @@ GRIPTab(parent, id, pos, size, style) {
     ss1BoxS->Add(new wxButton(this, id_button_Grasping, wxT("Execute Grasp")), 0, wxALL, 1);
     // Grasping
 
-    ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next grasp")), 0, wxALL, 1);
-    ss2BoxS->Add(new wxButton(this, id_button_FindGrasps, wxT("Calculate Grasps")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_next_grasp, wxT("Show next Jacobian grasp")), 0, wxALL, 1);
+    ss2BoxS->Add(new wxButton(this, id_button_FindGrasps, wxT("Prepare Grasp Info")), 0, wxALL, 1);
     checkShowCollMesh = new wxCheckBox(this, id_checkbox_showcollmesh, wxT("Show Grasp Target Pose"));
+    checkUseRRT = new wxCheckBox(this, id_checkbox_UseRRT, wxT("Use RRT Path"));
+    ss3BoxS->Add(checkUseRRT, 0, wxALL, 1);    
+    
     ss2BoxS->Add(checkShowCollMesh, 0, wxALL, 1);
     ss2BoxS->Add(new wxButton(this, id_button_CloseHand, wxT("Close Hand")), 0, wxALL, 1);   
     ss2BoxS->Add(new wxButton(this, id_button_OpenHand, wxT("Open Hand")), 0, wxALL, 1);
-
-
+    ss3BoxS->Add(new wxButton(this, id_button_PlanPath, wxT("Plan RRT Path")), 0, wxALL, 1);
+    ss3BoxS->Add(new wxButton(this, id_button_ShowConfig, wxT("Show RRT Config")), 0, wxALL, 1);
+    
     // Add the boxes to their respective sizers
     sizerFull->Add(ss1BoxS, 1, wxEXPAND | wxALL, 6);
     sizerFull->Add(ss2BoxS, 1, wxEXPAND | wxALL, 6);
+    sizerFull->Add(ss3BoxS, 1, wxEXPAND | wxALL, 6);
     SetSizer(sizerFull);
 
     // Additional settings
@@ -170,6 +183,9 @@ void manipulationTab::GRIPEventSceneLoaded() {
 void manipulationTab::onCheckShowCollMesh(wxCommandEvent &evt) {
 }
 
+void manipulationTab::onCheckUseRRT(wxCommandEvent &evt) {
+}
+
 /// Set start configuration to the configuration the arm is currently in
 void manipulationTab::onButtonSetStart(wxCommandEvent& evt){
     if(!mWorld || mRobot == NULL){
@@ -187,6 +203,19 @@ void manipulationTab::onButtonSetPredefStart(wxCommandEvent& evt){
         return;
     }
     mStartConf = mPredefStartConf;
+}
+
+//now plan a collision free path
+void manipulationTab::onButtonPlanPath(wxCommandEvent& evt) {
+	if(!mWorld || !mRobot || !grasper ||(grasper->getTargetEEFTransforms().size()==0))
+	{
+		cout <<"not prepared to plan\n";
+		return;
+	}
+	planPath();
+	
+	
+	
 }
 
 /// Show the currently set start configuration
@@ -237,6 +266,23 @@ void manipulationTab::onButtonNextGrasp(wxCommandEvent& evt){
 	viewer->DrawGLScene();
 }
 
+
+/// Show next RRT config
+void manipulationTab::onButtonShowConfig(wxCommandEvent& evt){
+    if(!mWorld || mRobot == NULL || rrtConfigs == NULL){
+        cout << "No configurations found" << endl;
+        return;
+    }
+
+	const Eigen::VectorXd aConfig = *(rrtConfigs->at(rrtConfigIndex));
+    mRobot->setConfig(mArmDofs, aConfig);
+    mRobot->update();
+    	  
+   	rrtConfigIndex++;
+    
+	viewer->DrawGLScene();
+}
+
 /// Close robot's end effector
 void manipulationTab::onButtonOpenHand(wxCommandEvent& evt) {
     if (grasper != NULL && eeName.size()) {
@@ -274,6 +320,27 @@ void manipulationTab::calculateGrasps()
     cout << "stuff " << endl;
      
 }     
+
+void manipulationTab::planPath()
+{
+	//const vector<Eigen::VectorXd> targetPoses;
+	//targetPoses << grasper->getTargetPoses();
+	double configStepSize = .1;	//.02
+	double jointStepSize = .3;	//.1
+	double workspaceThresh = .05;		//.05
+	int maxConnectIterations = 100;		//100
+	double angularL = .15;//what should it be?
+	
+	graspRRT = new planning::GraspRRT(mWorld, mRobot, mArmDofs, eeName, mStartConf, grasper->getTargetPoses(), configStepSize, jointStepSize, workspaceThresh, maxConnectIterations, angularL);
+	
+	if(!graspRRT->plan())
+	{
+		cout << "Error: unable to plan path\n";
+	}
+	//success
+	rrtConfigs = graspRRT->getConfigurations();
+	cout << "Number configurations: " << rrtConfigs->size() << "\n";
+}
 
 
 /// Set initial dynamic parameters and call grasp planner and controller
@@ -330,15 +397,30 @@ void manipulationTab::grasp() {
 	list<VectorXd> path;
 	Eigen::Matrix4d targetGrasp;
 	vector<int> mTotalDofs;
-    int result = grasper->getGrasp(shownGraspIndex, path, targetGrasp, mTotalDofs);
+	
+	//todo: add the rrt here.
+	int result=0;
+	if(checkUseRRT->IsChecked())	//allow to select between naive and collision free paths
+	{
+		cout << "Using RRT path\n";
+		Eigen::VectorXd targetGraspV;
+		result = graspRRT->getPath(path, targetGraspV, mTotalDofs);
+		//add path shortening here.
+	}
+	else
+	{
+		cout << "Using Jacobian path to selected pose\n";
+    	result = grasper->getGrasp(shownGraspIndex, path, targetGrasp, mTotalDofs);
+    }
     
 	if(result == 0)
 	{
 		//error
+		cout << "No path\n";
 		return;
 	}
 
-	cout << "Target Grasp: \n" << targetGrasp;
+	//cout << "Target Grasp: \n" << targetGrasp;
      
     // CHECK
     cout << "Offline Plan Size: " << (int)path.size();

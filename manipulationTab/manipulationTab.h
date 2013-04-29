@@ -44,6 +44,7 @@
 #include <Tabs/GRIPTab.h>
 #include "Grasper.h"
 #include "JTFollower.h"
+#include "GraspRRT.h"
 
 namespace planning { class Controller; }
 
@@ -72,9 +73,12 @@ public:
   void onButtonOpenHand(wxCommandEvent &evt);
   void onButtonCloseHand(wxCommandEvent &evt);
   void onCheckShowCollMesh(wxCommandEvent &evt);
+  void onCheckUseRRT(wxCommandEvent &evt);
   void onButtonNextGrasp(wxCommandEvent &evt);
-  
+  void onButtonPlanPath(wxCommandEvent &evt);
+  void onButtonShowConfig(wxCommandEvent &evt);
   void grasp();
+  void planPath();
   void retryGrasp();
   void drawAxes(Eigen::VectorXd origin, double size, tuple<double,double,double> color);
   void drawAxesWithOrientation(const Eigen::Matrix4d& transformation, double size, tuple<double,double,double> color);
@@ -84,10 +88,15 @@ public:
   planning::Controller* mController;
   planning::Grasper* grasper;
   wxCheckBox* checkShowCollMesh;
+  wxCheckBox* checkUseRRT;
   kinematics::BodyNode* selectedNode;
   robotics::Robot* mRobot;
+  std::vector<const Eigen::VectorXd*>* rrtConfigs;
   
   int shownGraspIndex = 0;
+  int rrtConfigIndex = 0;
+  
+  planning::GraspRRT *graspRRT;
   
   std::vector<int> mArmDofs;
   Eigen::VectorXd mStartConf;

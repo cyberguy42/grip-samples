@@ -67,6 +67,7 @@ class JointMover {
     robotics::World &mWorld;
     robotics::Robot* mRobot;
     std::vector<int> mLinks;
+    double mAngularL;
     
     double mWorkspaceThresh;
 
@@ -74,13 +75,16 @@ class JointMover {
     int mMaxIter;
     
   public:
-    JointMover( robotics::World &_world, robotics::Robot* robot, const std::vector<int> &_links,  std::string _EEName,
-        double _configStep);
+    JointMover( robotics::World &_world, robotics::Robot* robot, const std::vector<int> &_links,  std::string _EEName, double _configStep);
+        
+    JointMover( robotics::World &_world, robotics::Robot* robot, const std::vector<int> &_links,  std::string _EEName, double _configStep, int maxIter, double workspaceThresh, double angularL);
+    
     MatrixXd GetPseudoInvJac();
     
     double GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZ, VectorXd &_qResult, std::list<Eigen::VectorXd> &path, double angularL );
 
     VectorXd GetXYZRPY( VectorXd _q );
+    int getStepTowardsXYZRPY(VectorXd _qStart, VectorXd _targetXYZRPY, VectorXd &_qResult);
     
     double jointSpaceDistance(VectorXd _q1, VectorXd _q2);
     

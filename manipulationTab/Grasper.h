@@ -73,6 +73,7 @@ namespace planning {
         typedef struct {
    			int numFingers;
    			float thumb0, thumb1, thumb2, point0, point1, point2, middle0, middle1, middle2, ring0, ring1, ring2, pinky0, pinky1, pinky2, xCoord, yCoord, zCoord, r0, r1, r2, r3;
+   			Eigen::VectorXd pose;
 		} graspStruct;
 		
         void init(std::vector<int> dofs, Eigen::VectorXd start, kinematics::BodyNode* objectNode, double step);
@@ -100,6 +101,7 @@ namespace planning {
         int tryGrasp(graspStruct* grasp, int i);
         int getGrasp(int graspNum, list<VectorXd> &path, Eigen::Matrix4d &targetGrasp, vector<int> &dofs);
         Eigen::VectorXd getOrientationVector(Eigen::Matrix4d transformation);
+        vector<Eigen::VectorXd> getTargetPoses();
         
     protected:
         robotics::World* world;
