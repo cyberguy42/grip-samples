@@ -477,7 +477,7 @@ void manipulationTab::GRIPEventRender() {
     if(checkShowCollMesh->IsChecked() && grasper && mWorld)
     {
         drawAxesWithOrientation(grasper->getGCPTransform(), 0.08);	//where actual GCP is
-        drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
+    //    drawAxesWithOrientation(grasper->getEEFTransform(), 0.12);	//where actual wrist is
    //     cout << "\n\n GCP:\n" << grasper->getGCPTransform();
     //    cout <<"\n\n eef:\n" << grasper ->getEEFTransform();
         
@@ -490,7 +490,7 @@ void manipulationTab::GRIPEventRender() {
     		drawAxesWithOrientation(aGrasp, .06);		//desired location of gcp
     		
     		Matrix4d EEFTarget = grasper->getTargetEEFTransforms().at(shownGraspIndex);	//where wrist needs to be
-    		drawAxesWithOrientation(EEFTarget, .1);
+    		//drawAxesWithOrientation(EEFTarget, .1);
     		
     	//	cout << "\nTarget wrist location: \n" << grasper->getOrientationVector(EEFTarget);
     		
@@ -503,6 +503,9 @@ void manipulationTab::GRIPEventRender() {
     	}
     	
     	glFlush();
+    	VectorXd currObjLoc = grasper->getOrientationVector(selectedNode->getWorldTransform());
+    	//cout << "obj: " << currObjLoc[0] << ", " << currObjLoc[1] << ", " << currObjLoc[2] << ", " << currObjLoc[3] << ", " << currObjLoc[4] << ", " << currObjLoc[5] << endl;
+    	 
     }
 }
 

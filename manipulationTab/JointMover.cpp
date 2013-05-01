@@ -120,7 +120,7 @@ double JointMover::GoToXYZRPY( VectorXd _qStart, VectorXd _targetXYZRPY, VectorX
   //    cout << "mconfigstep: " << mConfigStep << ", new dConfig (other too big): \n" << dConfig << "\n";
     }
     
-    applyJointLimits(_qResult, dConfig);
+    //applyJointLimits(_qResult, dConfig);
     
     _qResult = _qResult + dConfig;
     
@@ -158,6 +158,23 @@ VectorXd JointMover::GetXYZRPY( VectorXd _q) {
   return qXYZRPY;
 }
 
+bool JointMover::jointsValid(const VectorXd &qTry)
+{
+	for(int i = 0; i < mLinks.size(); i++)
+	{
+		int jointNum = mLinks.at(i);
+		
+		double qMax = mRobot->getDof(jointNum)->getMax();
+		double qMin = mRobot->getDof(jointNum)->getMin();
+
+		if(qTry[i] > qMax || qTry[i] < qMin)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 void JointMover::applyJointLimits(VectorXd qCurr, VectorXd &qStep)
 {
 	for(int i = 0; i < mLinks.size(); i++)
@@ -172,11 +189,7 @@ void JointMover::applyJointLimits(VectorXd qCurr, VectorXd &qStep)
 
 			if(qStep[i] > maxStep)
 			{
-			cout << "qMax: " << qMax << ", current: " << qCurr[i] << "=maxStep: " << maxStep << endl;
-				if(i == 1)
-				{
-					cout << "qMax = " << qMax << ", current: " << qCurr[i] << ", old qStep: " << qStep[i] << ", new: " << maxStep << "\n";
-				}
+	//		cout << "qMax: " << qMax << ", current: " << qCurr[i] << "=maxStep: " << maxStep << endl;
 				qStep[i] = maxStep;
 			}
 		}

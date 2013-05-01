@@ -85,6 +85,7 @@ class JointMover {
     double jointSpaceDistance(VectorXd _q1, VectorXd _q2);
     void applyJointLimits(VectorXd _qResult, VectorXd &dconfig);
     VectorXd jointSpaceMovement(VectorXd _qStart, VectorXd _qGoal);
+	bool jointsValid(const VectorXd &qTry);
 };
 
 #endif

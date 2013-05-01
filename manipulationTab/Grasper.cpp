@@ -552,10 +552,11 @@ namespace planning {
         double angularL =palmTransformation.block(0,3,3,1).norm();        
         
         double distance = jm->GoToXYZRPY(startConfig, graspPose, goalPose, path, angularL);
+        bool goodJoints = jm->jointsValid(goalPose);
         
         cout << "\npath size: " << (int)path.size() << ", distance: " << distance << "\n";
         
-        if(distance > .05)
+        if(distance > .05 || !goodJoints)
         {
          	//	cout << "\nNot good enough\n";
         	return 0;
@@ -728,7 +729,7 @@ namespace planning {
 		
 		cout << "load grasps\n";
 		
-		pFile = fopen ("grasps/drill3.txt","r");
+		pFile = fopen ("grasps/drillauto.txt","r");
 		if(pFile==NULL)
 		{
 			cout << "\nerror, invalid file\n";
