@@ -728,7 +728,7 @@ namespace planning {
 		
 		cout << "load grasps\n";
 		
-		pFile = fopen ("grasps/drillauto.txt","r");
+		pFile = fopen ("grasps/drill3.txt","r");
 		if(pFile==NULL)
 		{
 			cout << "\nerror, invalid file\n";
@@ -751,11 +751,11 @@ namespace planning {
 			if(keepGoing==24)
 			{
 				objectGrasps.push_back(newGrasp);
-				cout << "keep going: " << keepGoing << " New grasp (x, y): " << newGrasp.xCoord <<", " << newGrasp.yCoord << "\n";
+	//			cout << "keep going: " << keepGoing << " New grasp (x, y): " << newGrasp.xCoord <<", " << newGrasp.yCoord << "\n";
 			}
 			else
 			{
-				cout << "bad one\n";
+	//			cout << "bad one\n";
 				keepGoing = 0;
 			}
 		}
