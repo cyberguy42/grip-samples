@@ -729,7 +729,7 @@ namespace planning {
 		
 		cout << "load grasps\n";
 		
-		pFile = fopen ("grasps/drillauto.txt","r");
+		pFile = fopen ("grasps/drill.txt","r");
 		if(pFile==NULL)
 		{
 			cout << "\nerror, invalid file\n";
