@@ -4,7 +4,7 @@
     name="hand_drill1">
     <inertial>
       <origin
-        xyz="0 0 0"
+        xyz=".108 .183 .02"
         rpy="0 0 0" />
       <mass
         value="2" />

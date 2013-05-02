@@ -1319,7 +1319,7 @@
     <parent link="Body_RSP"/>
     <child link="Body_RSR"/>
     <axis xyz="1 0 0"/>
-    <limit effort="10.0" lower="-1.5708" upper="1.5708" velocity="1.0"/>
+    <limit effort="10.0" lower="-1.5708" upper="0" velocity="1.0"/>
   </joint>
   <joint name="RSY" type="revolute">
     <origin rpy="0 -0 0" xyz="-0.0269 0 -0.0245"/>

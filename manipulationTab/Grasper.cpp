@@ -554,7 +554,7 @@ namespace planning {
         double distance = jm->GoToXYZRPY(startConfig, graspPose, goalPose, path, angularL);
         bool goodJoints = jm->jointsValid(goalPose);
         
-        cout << "\npath size: " << (int)path.size() << ", distance: " << distance << "\n";
+        cout << "\npath size: " << (int)path.size() << ", distance: " << distance << ", valid: " << goodJoints << "\n";
         
         if(distance > .05 || !goodJoints)
         {

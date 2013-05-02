@@ -13,7 +13,7 @@
   </entity>
 
   <entity model="hand_drill1" name="hand_drill1">
-    <origin xyz="0.40 -0.1 .79" rpy="0.0 0.0 -179.0"/>
+    <origin xyz="0.42 -0.16 .796" rpy="0.0 .251 -3.1415"/>
   </entity>
 
 
